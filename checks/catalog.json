@@ -1,0 +1,118 @@
+{
+  "catalog_version": "1.0.0",
+  "application": "SecureAudit",
+  "platform": "Windows",
+  "description": "Approved Windows technical configuration checks for the SecureAudit MVP.",
+  "checks": [
+    {
+      "id": "WIN-FW-001",
+      "name": "Windows Firewall Enabled",
+      "description": "Checks whether all applicable Windows Firewall profiles are enabled.",
+      "script": "firewall.ps1",
+      "category": "Network Security",
+      "severity": "High",
+      "expected_value": "All applicable Windows Firewall profiles are enabled",
+      "requires_administrator": false,
+      "mapped_safeguard": "CIS Controls v8.1 Safeguard 4.5",
+      "mapping_type": "Partial",
+      "mapping_note": "This check verifies firewall enablement only and does not validate every requirement of the broader safeguard.",
+      "supported_platforms": [
+        "Windows 10",
+        "Windows 11",
+        "Windows Server 2019",
+        "Windows Server 2022"
+      ],
+      "remediation": "Enable the Domain, Private, and Public Windows Firewall profiles through Windows Security, Group Policy, or an approved administrative configuration method.",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "id": "WIN-DEF-001",
+      "name": "Microsoft Defender Antivirus Active",
+      "description": "Checks whether Microsoft Defender Antivirus is installed and reports antivirus protection as enabled.",
+      "script": "defender.ps1",
+      "category": "Malware Defense",
+      "severity": "High",
+      "expected_value": "Microsoft Defender Antivirus protection is enabled",
+      "requires_administrator": false,
+      "mapped_safeguard": null,
+      "mapping_type": "Pending validation",
+      "mapping_note": "The technical check is included in the MVP, but its exact CIS Controls safeguard mapping will be validated before the reporting feature is finalized.",
+      "supported_platforms": [
+        "Windows 10",
+        "Windows 11",
+        "Windows Server 2019",
+        "Windows Server 2022"
+      ],
+      "remediation": "Enable Microsoft Defender Antivirus or confirm that an approved third-party antivirus product is intentionally managing endpoint protection.",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "id": "WIN-BL-001",
+      "name": "BitLocker Protection Active",
+      "description": "Checks whether BitLocker protection is active on the operating-system drive.",
+      "script": "bitlocker.ps1",
+      "category": "Data Protection",
+      "severity": "High",
+      "expected_value": "BitLocker protection is active on the operating-system drive",
+      "requires_administrator": true,
+      "mapped_safeguard": null,
+      "mapping_type": "Pending validation",
+      "mapping_note": "The technical check is included in the MVP, but its exact CIS Controls safeguard mapping will be validated before the reporting feature is finalized.",
+      "supported_platforms": [
+        "Windows 10",
+        "Windows 11",
+        "Windows Server 2019",
+        "Windows Server 2022"
+      ],
+      "remediation": "Enable BitLocker on the operating-system drive and securely back up the recovery key using an approved organizational process.",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "id": "WIN-GUEST-001",
+      "name": "Guest Account Disabled",
+      "description": "Checks whether the built-in Windows Guest account is disabled.",
+      "script": "guest_account.ps1",
+      "category": "Account Management",
+      "severity": "Medium",
+      "expected_value": "The built-in Guest account is disabled",
+      "requires_administrator": false,
+      "mapped_safeguard": null,
+      "mapping_type": "Pending validation",
+      "mapping_note": "The technical check is included in the MVP, but its exact CIS Controls safeguard mapping will be validated before the reporting feature is finalized.",
+      "supported_platforms": [
+        "Windows 10",
+        "Windows 11",
+        "Windows Server 2019",
+        "Windows Server 2022"
+      ],
+      "remediation": "Disable the built-in Guest account through Local Users and Groups, PowerShell, or an approved Group Policy configuration.",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "id": "WIN-SMB1-001",
+      "name": "SMBv1 Disabled",
+      "description": "Checks whether the legacy SMBv1 protocol is disabled.",
+      "script": "smbv1.ps1",
+      "category": "Secure Configuration",
+      "severity": "Critical",
+      "expected_value": "SMBv1 is disabled",
+      "requires_administrator": true,
+      "mapped_safeguard": null,
+      "mapping_type": "Pending validation",
+      "mapping_note": "The technical check is included in the MVP, but its exact CIS Controls safeguard mapping will be validated before the reporting feature is finalized.",
+      "supported_platforms": [
+        "Windows 10",
+        "Windows 11",
+        "Windows Server 2019",
+        "Windows Server 2022"
+      ],
+      "remediation": "Disable the SMB 1.0/CIFS feature unless a documented and approved legacy dependency requires it.",
+      "version": "1.0.0",
+      "enabled": true
+    }
+  ]
+}
