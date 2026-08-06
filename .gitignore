@@ -10,6 +10,73 @@
 # Icon must end with two \r
 Icon
 
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# SecureAudit runtime evidence
+data/*
+!data/.gitkeep
+
+# Generated reports
+reports/*
+!reports/.gitkeep
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+logs/
+
+# Testing and coverage
+.coverage
+coverage.xml
+htmlcov/
+test-results/
+
+# PyInstaller output
+build/
+dist/
+*.spec.bak
+
+# Python packaging
+*.egg-info/
+.eggs/
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
 .vscode/
 
 # Thumbnails
