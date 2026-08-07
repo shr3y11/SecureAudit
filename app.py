@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import socket
+import threading
 import tkinter as tk
 from datetime import UTC, datetime
 from pathlib import Path
@@ -155,6 +156,7 @@ class SecureAuditApp:
         self.error_value = tk.StringVar(value="0")
         self.score_value = tk.StringVar(value="—")
         self.coverage_value = tk.StringVar(value="—")
+        self.scan_status = tk.StringVar(value="Ready")
 
         self.last_report_path: Path | None = None
         self.current_scan_id: str | None = None
@@ -358,6 +360,14 @@ class SecureAuditApp:
             pady=(10, 0),
         )
 
+        self.scan_status_label = ttk.Label(
+            controls_frame,
+            textvariable=self.scan_status,
+        )
+        self.scan_status_label.pack(
+            side=tk.LEFT,
+        )
+
         self.run_button = ttk.Button(
             controls_frame,
             text="Run Selected Checks",
@@ -451,10 +461,10 @@ class SecureAuditApp:
             "observed": "Observed",
         }
 
-        for column, heading in headings.items():
+        for column, heading_text in headings.items():
             self.results_table.heading(
                 column,
-                text=heading,
+                text=heading_text,
             )
 
         self.results_table.column(
@@ -739,7 +749,7 @@ class SecureAuditApp:
         )
 
     def _run_selected_checks(self) -> None:
-        """Run the currently selected approved checks."""
+        """Start selected checks without blocking the Tkinter UI thread."""
 
         selected_check_ids = self._selected_check_ids()
 
@@ -754,25 +764,54 @@ class SecureAuditApp:
             state=tk.DISABLED,
         )
 
-        self.root.update_idletasks()
+        check_count = len(selected_check_ids)
+
+        if check_count == 1:
+            self.scan_status.set(
+                "Scanning 1 selected check..."
+            )
+        else:
+            self.scan_status.set(
+                f"Scanning {check_count} selected checks..."
+            )
+
+        worker = threading.Thread(
+            target=self._scan_worker,
+            args=(selected_check_ids,),
+            daemon=True,
+        )
+
+        worker.start()
+
+    def _scan_worker(
+        self,
+        selected_check_ids: list[str],
+    ) -> None:
+        """Execute the scan workflow outside the Tkinter UI thread."""
 
         try:
             workflow_result = run_local_scan(
                 selected_check_ids
             )
         except Exception as exc:
-            messagebox.showerror(
-                "Scan Error",
-                (
-                    "SecureAudit could not complete the scan.\n\n"
-                    f"{exc}"
-                ),
+            self.root.after(
+                0,
+                self._handle_scan_error,
+                exc,
             )
             return
-        finally:
-            self.run_button.configure(
-                state=tk.NORMAL,
-            )
+
+        self.root.after(
+            0,
+            self._handle_scan_success,
+            workflow_result,
+        )
+
+    def _handle_scan_success(
+        self,
+        workflow_result: dict[str, Any],
+    ) -> None:
+        """Update the interface after the worker completes successfully."""
 
         scan = workflow_result["scan"]
         report_path = workflow_result["report_path"]
@@ -780,6 +819,37 @@ class SecureAuditApp:
         self._display_scan_results(
             scan,
             report_path,
+        )
+
+        self.scan_status.set(
+            f"Scan completed — {scan['selected_count']} selected, "
+            f"{scan['assessed_count']} assessed"
+        )
+
+        self.run_button.configure(
+            state=tk.NORMAL,
+        )
+
+    def _handle_scan_error(
+        self,
+        error: Exception,
+    ) -> None:
+        """Restore the interface after a workflow-level scan failure."""
+
+        self.scan_status.set(
+            "Scan could not be completed"
+        )
+
+        self.run_button.configure(
+            state=tk.NORMAL,
+        )
+
+        messagebox.showerror(
+            "Scan Error",
+            (
+                "SecureAudit could not complete the scan.\n\n"
+                f"{error}"
+            ),
         )
 
     def _open_scan_history(self) -> None:
