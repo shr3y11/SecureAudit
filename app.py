@@ -68,21 +68,7 @@ def _validate_selected_check_ids(
 def run_local_scan(
     selected_check_ids: Iterable[str],
 ) -> dict[str, Any]:
-    """Run the complete local SecureAudit assessment workflow.
-
-    Workflow:
-
-        selected approved IDs
-            -> scanner
-            -> normalized results
-            -> scoring
-            -> SQLite persistence
-            -> stored scan retrieval
-            -> HTML reporting
-
-    The scanner remains responsible for deciding whether a check ID is
-    approved and whether its PowerShell script may execute.
-    """
+    """Run the complete local SecureAudit assessment workflow."""
 
     check_ids = _validate_selected_check_ids(selected_check_ids)
 
@@ -128,7 +114,6 @@ def _load_enabled_checks() -> list[dict[str, Any]]:
     """Load enabled approved checks for display in the desktop interface."""
 
     catalog = load_catalog()
-
     checks = catalog.get("checks")
 
     if not isinstance(checks, list):
@@ -161,13 +146,20 @@ class SecureAuditApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("SecureAudit")
-        self.root.geometry("900x650")
-        self.root.minsize(760, 520)
+        self.root.geometry("1100x760")
+        self.root.minsize(900, 650)
 
         self.check_variables: dict[str, tk.BooleanVar] = {}
 
-        self.selection_status = tk.StringVar()
-        self.selection_status.set("0 checks selected")
+        self.selection_status = tk.StringVar(value="0 checks selected")
+
+        self.passed_value = tk.StringVar(value="0")
+        self.failed_value = tk.StringVar(value="0")
+        self.error_value = tk.StringVar(value="0")
+        self.score_value = tk.StringVar(value="—")
+        self.coverage_value = tk.StringVar(value="—")
+
+        self.last_report_path: Path | None = None
 
         self._build_interface()
 
@@ -188,20 +180,16 @@ class SecureAuditApp:
             text="SecureAudit",
             font=("Segoe UI", 22, "bold"),
         )
-        title_label.pack(
-            anchor=tk.W,
-        )
+        title_label.pack(anchor=tk.W)
 
         subtitle_label = ttk.Label(
             main_frame,
-            text=(
-                "Windows Technical Configuration Assessment"
-            ),
+            text="Windows Technical Configuration Assessment",
             font=("Segoe UI", 11),
         )
         subtitle_label.pack(
             anchor=tk.W,
-            pady=(0, 18),
+            pady=(0, 14),
         )
 
         information_label = ttk.Label(
@@ -210,7 +198,7 @@ class SecureAuditApp:
                 "Select approved technical checks to assess this Windows "
                 "system. Only predefined SecureAudit scanner modules can run."
             ),
-            wraplength=820,
+            wraplength=1000,
             justify=tk.LEFT,
         )
         information_label.pack(
@@ -218,7 +206,45 @@ class SecureAuditApp:
             pady=(0, 12),
         )
 
-        toolbar_frame = ttk.Frame(main_frame)
+        content_pane = ttk.Panedwindow(
+            main_frame,
+            orient=tk.VERTICAL,
+        )
+        content_pane.pack(
+            fill=tk.BOTH,
+            expand=True,
+        )
+
+        checklist_section = ttk.Frame(
+            content_pane,
+            padding=(0, 0, 0, 10),
+        )
+
+        results_section = ttk.Frame(
+            content_pane,
+            padding=(0, 10, 0, 0),
+        )
+
+        content_pane.add(
+            checklist_section,
+            weight=2,
+        )
+
+        content_pane.add(
+            results_section,
+            weight=3,
+        )
+
+        self._build_checklist_section(checklist_section)
+        self._build_results_section(results_section)
+
+    def _build_checklist_section(
+        self,
+        parent: ttk.Frame,
+    ) -> None:
+        """Build the approved-check selection area."""
+
+        toolbar_frame = ttk.Frame(parent)
         toolbar_frame.pack(
             fill=tk.X,
             pady=(0, 10),
@@ -229,9 +255,7 @@ class SecureAuditApp:
             text="Select All",
             command=self._select_all_checks,
         )
-        select_all_button.pack(
-            side=tk.LEFT,
-        )
+        select_all_button.pack(side=tk.LEFT)
 
         clear_all_button = ttk.Button(
             toolbar_frame,
@@ -247,20 +271,9 @@ class SecureAuditApp:
             toolbar_frame,
             textvariable=self.selection_status,
         )
-        selection_label.pack(
-            side=tk.RIGHT,
-        )
+        selection_label.pack(side=tk.RIGHT)
 
-        separator = ttk.Separator(
-            main_frame,
-            orient=tk.HORIZONTAL,
-        )
-        separator.pack(
-            fill=tk.X,
-            pady=(0, 10),
-        )
-
-        checklist_container = ttk.Frame(main_frame)
+        checklist_container = ttk.Frame(parent)
         checklist_container.pack(
             fill=tk.BOTH,
             expand=True,
@@ -317,22 +330,195 @@ class SecureAuditApp:
 
         self._populate_checklist()
 
-        bottom_separator = ttk.Separator(
-            main_frame,
-            orient=tk.HORIZONTAL,
-        )
-        bottom_separator.pack(
+        controls_frame = ttk.Frame(parent)
+        controls_frame.pack(
             fill=tk.X,
-            pady=(12, 12),
+            pady=(10, 0),
         )
 
-        run_button = ttk.Button(
-            main_frame,
+        self.run_button = ttk.Button(
+            controls_frame,
             text="Run Selected Checks",
             command=self._run_selected_checks,
         )
-        run_button.pack(
-            anchor=tk.E,
+        self.run_button.pack(side=tk.RIGHT)
+
+    def _build_results_section(
+        self,
+        parent: ttk.Frame,
+    ) -> None:
+        """Build scan summary and detailed result table."""
+
+        heading = ttk.Label(
+            parent,
+            text="Latest Scan Results",
+            font=("Segoe UI", 14, "bold"),
+        )
+        heading.pack(
+            anchor=tk.W,
+            pady=(0, 10),
+        )
+
+        summary_frame = ttk.Frame(parent)
+        summary_frame.pack(
+            fill=tk.X,
+            pady=(0, 12),
+        )
+
+        summary_items = [
+            ("Passed", self.passed_value),
+            ("Failed", self.failed_value),
+            ("Errors", self.error_value),
+            ("Compliance Score", self.score_value),
+            ("Assessment Coverage", self.coverage_value),
+        ]
+
+        for column, (label_text, value_variable) in enumerate(
+            summary_items
+        ):
+            summary_frame.columnconfigure(
+                column,
+                weight=1,
+            )
+
+            card = ttk.LabelFrame(
+                summary_frame,
+                text=label_text,
+                padding=10,
+            )
+            card.grid(
+                row=0,
+                column=column,
+                sticky="nsew",
+                padx=(0 if column == 0 else 5, 5),
+            )
+
+            value_label = ttk.Label(
+                card,
+                textvariable=value_variable,
+                font=("Segoe UI", 13, "bold"),
+            )
+            value_label.pack()
+
+        table_frame = ttk.Frame(parent)
+        table_frame.pack(
+            fill=tk.BOTH,
+            expand=True,
+        )
+
+        columns = (
+            "check_id",
+            "check_name",
+            "status",
+            "expected",
+            "observed",
+        )
+
+        self.results_table = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=10,
+        )
+
+        self.results_table.heading(
+            "check_id",
+            text="Check ID",
+        )
+        self.results_table.heading(
+            "check_name",
+            text="Check",
+        )
+        self.results_table.heading(
+            "status",
+            text="Status",
+        )
+        self.results_table.heading(
+            "expected",
+            text="Expected",
+        )
+        self.results_table.heading(
+            "observed",
+            text="Observed",
+        )
+
+        self.results_table.column(
+            "check_id",
+            width=120,
+            anchor=tk.W,
+        )
+        self.results_table.column(
+            "check_name",
+            width=210,
+            anchor=tk.W,
+        )
+        self.results_table.column(
+            "status",
+            width=80,
+            anchor=tk.CENTER,
+        )
+        self.results_table.column(
+            "expected",
+            width=280,
+            anchor=tk.W,
+        )
+        self.results_table.column(
+            "observed",
+            width=300,
+            anchor=tk.W,
+        )
+
+        vertical_scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient=tk.VERTICAL,
+            command=self.results_table.yview,
+        )
+
+        horizontal_scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient=tk.HORIZONTAL,
+            command=self.results_table.xview,
+        )
+
+        self.results_table.configure(
+            yscrollcommand=vertical_scrollbar.set,
+            xscrollcommand=horizontal_scrollbar.set,
+        )
+
+        self.results_table.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
+        )
+
+        vertical_scrollbar.grid(
+            row=0,
+            column=1,
+            sticky="ns",
+        )
+
+        horizontal_scrollbar.grid(
+            row=1,
+            column=0,
+            sticky="ew",
+        )
+
+        table_frame.rowconfigure(
+            0,
+            weight=1,
+        )
+        table_frame.columnconfigure(
+            0,
+            weight=1,
+        )
+
+        self.report_status = ttk.Label(
+            parent,
+            text="No report generated in this session.",
+        )
+        self.report_status.pack(
+            anchor=tk.W,
+            pady=(8, 0),
         )
 
     def _populate_checklist(self) -> None:
@@ -358,10 +544,7 @@ class SecureAuditApp:
             check_id = check["id"]
             check_name = check["name"]
 
-            variable = tk.BooleanVar(
-                value=False,
-            )
-
+            variable = tk.BooleanVar(value=False)
             self.check_variables[check_id] = variable
 
             check_frame = ttk.Frame(
@@ -379,9 +562,7 @@ class SecureAuditApp:
                 variable=variable,
                 command=self._update_selection_status,
             )
-            checkbox.pack(
-                anchor=tk.W,
-            )
+            checkbox.pack(anchor=tk.W)
 
             metadata_parts = [
                 f"Category: {check.get('category', 'Unknown')}",
@@ -389,9 +570,7 @@ class SecureAuditApp:
             ]
 
             if check.get("requires_administrator") is True:
-                metadata_parts.append(
-                    "Administrator required"
-                )
+                metadata_parts.append("Administrator required")
             else:
                 metadata_parts.append(
                     "Administrator not required"
@@ -413,7 +592,7 @@ class SecureAuditApp:
                 description_label = ttk.Label(
                     check_frame,
                     text=str(description),
-                    wraplength=760,
+                    wraplength=900,
                     justify=tk.LEFT,
                 )
                 description_label.pack(
@@ -426,9 +605,7 @@ class SecureAuditApp:
                 self.checklist_frame,
                 orient=tk.HORIZONTAL,
             )
-            separator.pack(
-                fill=tk.X,
-            )
+            separator.pack(fill=tk.X)
 
         self._update_selection_status()
 
@@ -471,6 +648,65 @@ class SecureAuditApp:
 
         self._update_selection_status()
 
+    def _clear_results_table(self) -> None:
+        """Remove previous result rows."""
+
+        for item in self.results_table.get_children():
+            self.results_table.delete(item)
+
+    def _display_scan_results(
+        self,
+        scan: dict[str, Any],
+        report_path: Path,
+    ) -> None:
+        """Display the latest persisted scan in the main window."""
+
+        self._clear_results_table()
+
+        self.passed_value.set(
+            str(scan["passed_count"])
+        )
+        self.failed_value.set(
+            str(scan["failed_count"])
+        )
+        self.error_value.set(
+            str(scan["error_count"])
+        )
+
+        compliance_score = scan["compliance_score"]
+
+        if compliance_score is None:
+            self.score_value.set(
+                "Not available"
+            )
+        else:
+            self.score_value.set(
+                f"{compliance_score:.2f}%"
+            )
+
+        self.coverage_value.set(
+            f"{scan['coverage_percentage']:.2f}%"
+        )
+
+        for result in scan["results"]:
+            self.results_table.insert(
+                "",
+                tk.END,
+                values=(
+                    result["check_id"],
+                    result["check_name"],
+                    result["status"],
+                    result["expected_value"],
+                    result["observed_value"],
+                ),
+            )
+
+        self.last_report_path = report_path
+
+        self.report_status.configure(
+            text=f"Report generated: {report_path.resolve()}"
+        )
+
     def _run_selected_checks(self) -> None:
         """Run the currently selected approved checks."""
 
@@ -482,6 +718,12 @@ class SecureAuditApp:
                 "Select at least one approved check before running a scan.",
             )
             return
+
+        self.run_button.configure(
+            state=tk.DISABLED,
+        )
+
+        self.root.update_idletasks()
 
         try:
             workflow_result = run_local_scan(
@@ -496,30 +738,17 @@ class SecureAuditApp:
                 ),
             )
             return
+        finally:
+            self.run_button.configure(
+                state=tk.NORMAL,
+            )
 
         scan = workflow_result["scan"]
         report_path = workflow_result["report_path"]
 
-        score = scan["compliance_score"]
-        coverage = scan["coverage_percentage"]
-
-        if score is None:
-            score_text = "Not available"
-        else:
-            score_text = f"{score:.2f}%"
-
-        messagebox.showinfo(
-            "Scan Completed",
-            (
-                "SecureAudit completed the selected assessment.\n\n"
-                f"Selected: {scan['selected_count']}\n"
-                f"Passed: {scan['passed_count']}\n"
-                f"Failed: {scan['failed_count']}\n"
-                f"Errors: {scan['error_count']}\n"
-                f"Compliance score: {score_text}\n"
-                f"Assessment coverage: {coverage:.2f}%\n\n"
-                f"Report:\n{report_path.resolve()}"
-            ),
+        self._display_scan_results(
+            scan,
+            report_path,
         )
 
 
