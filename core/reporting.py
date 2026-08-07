@@ -13,10 +13,10 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final
 
+from core.paths import reports_directory as default_reports_directory
 
-DEFAULT_REPORTS_DIRECTORY: Final[Path] = (
-    Path(__file__).resolve().parents[1] / "reports"
-)
+
+DEFAULT_REPORTS_DIRECTORY: Final[Path] = default_reports_directory()
 
 ALLOWED_STATUSES: Final[frozenset[str]] = frozenset(
     {
