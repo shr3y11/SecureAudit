@@ -276,3 +276,60 @@ def test_request_elevation_rejects_non_windows_platform(
         match="supported only on Windows",
     ):
         request_elevation()
+
+@patch(
+    "core.admin.sys.argv",
+    [r"C:\Program Files\SecureAudit\SecureAudit.exe"],
+)
+@patch(
+    "core.admin.sys.executable",
+    r"C:\Program Files\SecureAudit\SecureAudit.exe",
+)
+@patch(
+    "core.admin.sys.frozen",
+    True,
+    create=True,
+)
+def test_build_relaunch_command_uses_frozen_executable():
+    """Frozen execution should elevate SecureAudit.exe directly."""
+
+    from core.admin import _build_relaunch_command
+
+    executable, parameters = _build_relaunch_command()
+
+    assert executable == (
+        r"C:\Program Files\SecureAudit\SecureAudit.exe"
+    )
+    assert parameters == ""
+
+
+@patch(
+    "core.admin.sys.argv",
+    [
+        r"C:\Program Files\SecureAudit\SecureAudit.exe",
+        "--example",
+        "value with spaces",
+    ],
+)
+@patch(
+    "core.admin.sys.executable",
+    r"C:\Program Files\SecureAudit\SecureAudit.exe",
+)
+@patch(
+    "core.admin.sys.frozen",
+    True,
+    create=True,
+)
+def test_build_relaunch_command_preserves_frozen_arguments():
+    """Frozen relaunch should preserve and safely quote arguments."""
+
+    from core.admin import _build_relaunch_command
+
+    executable, parameters = _build_relaunch_command()
+
+    assert executable == (
+        r"C:\Program Files\SecureAudit\SecureAudit.exe"
+    )
+    assert "--example" in parameters
+    assert '"value with spaces"' in parameters
+
