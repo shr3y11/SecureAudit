@@ -87,19 +87,19 @@ def _build_relaunch_command() -> tuple[str, str]:
     Build the executable and parameter string used for elevation.
 
     Normal Python execution:
-        python.exe app.py <original arguments>
+        pythonw.exe app.py <original arguments>
 
     PyInstaller execution:
         SecureAudit.exe <original arguments>
 
-    This allows the same elevation layer to be reused by the packaged
-    Windows executable later.
+    Using pythonw.exe during development prevents an unnecessary console
+    window from appearing behind the Tkinter interface after UAC elevation.
     """
 
-    executable = str(sys.executable)
     original_arguments = [str(argument) for argument in sys.argv[1:]]
 
     if getattr(sys, "frozen", False):
+        executable = str(sys.executable)
         parameters = subprocess.list2cmdline(
             original_arguments,
         )
@@ -108,6 +108,14 @@ def _build_relaunch_command() -> tuple[str, str]:
     if not sys.argv or not sys.argv[0]:
         raise ElevationRequestError(
             "SecureAudit could not determine the application entry point."
+        )
+
+    python_executable = Path(sys.executable)
+    pythonw_executable = python_executable.with_name("pythonw.exe")
+
+    if not pythonw_executable.is_file():
+        raise ElevationRequestError(
+            "SecureAudit could not locate pythonw.exe for GUI elevation."
         )
 
     entry_point = str(
@@ -121,7 +129,7 @@ def _build_relaunch_command() -> tuple[str, str]:
         ]
     )
 
-    return executable, parameters
+    return str(pythonw_executable), parameters
 
 
 def _launch_elevated(

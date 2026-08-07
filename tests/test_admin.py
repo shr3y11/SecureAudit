@@ -2,7 +2,44 @@
 
 from unittest.mock import patch
 
+from pathlib import Path
 import pytest
+
+@patch("core.admin.sys.argv", [r"C:\SecureAudit\app.py"])
+@patch("core.admin.sys.executable", r"C:\Python\python.exe")
+@patch("core.admin.Path.is_file", return_value=False)
+def test_build_relaunch_command_rejects_missing_pythonw(
+    mock_is_file,
+):
+    """SecureAudit must fail clearly if pythonw.exe cannot be located."""
+
+    from core.admin import _build_relaunch_command
+
+    with pytest.raises(
+        ElevationRequestError,
+        match="could not locate pythonw.exe",
+    ):
+        _build_relaunch_command()
+
+    mock_is_file.assert_called_once_with()
+
+@patch("core.admin.sys.argv", [r"C:\SecureAudit\app.py"])
+@patch("core.admin.sys.executable", r"C:\Python\python.exe")
+@patch("core.admin.Path.is_file", return_value=True)
+def test_build_relaunch_command_uses_pythonw_for_source_execution(
+    mock_is_file,
+):
+    """Source execution should elevate through pythonw.exe."""
+
+    from core.admin import _build_relaunch_command
+
+    executable, parameters = _build_relaunch_command()
+
+    assert executable == str(
+        Path(r"C:\Python\python.exe").with_name("pythonw.exe")
+    )
+    assert "app.py" in parameters
+    mock_is_file.assert_called_once_with()
 
 from core.admin import (
     AdminPrivilegeError,
