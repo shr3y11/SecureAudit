@@ -16,10 +16,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
+from core.paths import database_path as default_database_path
 
-DEFAULT_DATABASE_PATH: Final[Path] = (
-    Path(__file__).resolve().parents[1] / "data" / "secureaudit.db"
-)
+
+DEFAULT_DATABASE_PATH: Final[Path] = default_database_path()
 
 ALLOWED_STATUSES: Final[frozenset[str]] = frozenset(
     {
