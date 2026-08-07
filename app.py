@@ -9,6 +9,7 @@ generation remain delegated to the reusable core modules.
 
 from __future__ import annotations
 
+import os
 import socket
 import tkinter as tk
 from datetime import UTC, datetime
@@ -16,7 +17,7 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any, Iterable
 
-from core.database import get_scan, save_scan
+from core.database import get_scan, list_scans, save_scan
 from core.reporting import write_html_report
 from core.scanner import load_catalog, run_check
 from core.scoring import calculate_score
@@ -35,11 +36,7 @@ def _utc_now() -> str:
 def _validate_selected_check_ids(
     selected_check_ids: Iterable[str],
 ) -> list[str]:
-    """Validate application-level structure for selected check identifiers.
-
-    Approval and script security are intentionally not checked here.
-    Those security decisions remain the responsibility of core.scanner.
-    """
+    """Validate application-level structure for selected check identifiers."""
 
     if isinstance(selected_check_ids, (str, bytes)):
         raise ValueError(
@@ -146,8 +143,8 @@ class SecureAuditApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("SecureAudit")
-        self.root.geometry("1100x760")
-        self.root.minsize(900, 650)
+        self.root.geometry("1150x800")
+        self.root.minsize(920, 680)
 
         self.check_variables: dict[str, tk.BooleanVar] = {}
 
@@ -160,6 +157,7 @@ class SecureAuditApp:
         self.coverage_value = tk.StringVar(value="—")
 
         self.last_report_path: Path | None = None
+        self.current_scan_id: str | None = None
 
         self._build_interface()
 
@@ -198,12 +196,36 @@ class SecureAuditApp:
                 "Select approved technical checks to assess this Windows "
                 "system. Only predefined SecureAudit scanner modules can run."
             ),
-            wraplength=1000,
+            wraplength=1050,
             justify=tk.LEFT,
         )
         information_label.pack(
             anchor=tk.W,
             pady=(0, 12),
+        )
+
+        navigation_frame = ttk.Frame(main_frame)
+        navigation_frame.pack(
+            fill=tk.X,
+            pady=(0, 10),
+        )
+
+        history_button = ttk.Button(
+            navigation_frame,
+            text="Scan History",
+            command=self._open_scan_history,
+        )
+        history_button.pack(side=tk.RIGHT)
+
+        self.open_report_button = ttk.Button(
+            navigation_frame,
+            text="Open HTML Report",
+            command=self._open_current_report,
+            state=tk.DISABLED,
+        )
+        self.open_report_button.pack(
+            side=tk.RIGHT,
+            padx=(0, 8),
         )
 
         content_pane = ttk.Panedwindow(
@@ -421,26 +443,19 @@ class SecureAuditApp:
             height=10,
         )
 
-        self.results_table.heading(
-            "check_id",
-            text="Check ID",
-        )
-        self.results_table.heading(
-            "check_name",
-            text="Check",
-        )
-        self.results_table.heading(
-            "status",
-            text="Status",
-        )
-        self.results_table.heading(
-            "expected",
-            text="Expected",
-        )
-        self.results_table.heading(
-            "observed",
-            text="Observed",
-        )
+        headings = {
+            "check_id": "Check ID",
+            "check_name": "Check",
+            "status": "Status",
+            "expected": "Expected",
+            "observed": "Observed",
+        }
+
+        for column, heading in headings.items():
+            self.results_table.heading(
+                column,
+                text=heading,
+            )
 
         self.results_table.column(
             "check_id",
@@ -514,7 +529,7 @@ class SecureAuditApp:
 
         self.report_status = ttk.Label(
             parent,
-            text="No report generated in this session.",
+            text="No report selected in this session.",
         )
         self.report_status.pack(
             anchor=tk.W,
@@ -657,11 +672,13 @@ class SecureAuditApp:
     def _display_scan_results(
         self,
         scan: dict[str, Any],
-        report_path: Path,
+        report_path: Path | None = None,
     ) -> None:
-        """Display the latest persisted scan in the main window."""
+        """Display a persisted scan in the main window."""
 
         self._clear_results_table()
+
+        self.current_scan_id = scan["scan_id"]
 
         self.passed_value.set(
             str(scan["passed_count"])
@@ -701,10 +718,24 @@ class SecureAuditApp:
                 ),
             )
 
-        self.last_report_path = report_path
+        if report_path is not None:
+            self.last_report_path = report_path
 
-        self.report_status.configure(
-            text=f"Report generated: {report_path.resolve()}"
+            self.report_status.configure(
+                text=f"Report: {report_path.resolve()}"
+            )
+        else:
+            self.last_report_path = None
+
+            self.report_status.configure(
+                text=(
+                    "Historical scan loaded. "
+                    "Open HTML Report will generate/open its report."
+                )
+            )
+
+        self.open_report_button.configure(
+            state=tk.NORMAL,
         )
 
     def _run_selected_checks(self) -> None:
@@ -749,6 +780,323 @@ class SecureAuditApp:
         self._display_scan_results(
             scan,
             report_path,
+        )
+
+    def _open_scan_history(self) -> None:
+        """Open a window containing recent persisted scans."""
+
+        try:
+            scans = list_scans(limit=100)
+        except Exception as exc:
+            messagebox.showerror(
+                "Scan History Error",
+                f"SecureAudit could not read scan history.\n\n{exc}",
+            )
+            return
+
+        history_window = tk.Toplevel(self.root)
+        history_window.title("SecureAudit Scan History")
+        history_window.geometry("900x450")
+        history_window.minsize(760, 350)
+        history_window.transient(self.root)
+
+        outer_frame = ttk.Frame(
+            history_window,
+            padding=16,
+        )
+        outer_frame.pack(
+            fill=tk.BOTH,
+            expand=True,
+        )
+
+        heading = ttk.Label(
+            outer_frame,
+            text="Scan History",
+            font=("Segoe UI", 16, "bold"),
+        )
+        heading.pack(
+            anchor=tk.W,
+            pady=(0, 10),
+        )
+
+        if not scans:
+            empty_label = ttk.Label(
+                outer_frame,
+                text="No completed scans are stored yet.",
+            )
+            empty_label.pack(
+                anchor=tk.W,
+            )
+            return
+
+        table_frame = ttk.Frame(outer_frame)
+        table_frame.pack(
+            fill=tk.BOTH,
+            expand=True,
+        )
+
+        columns = (
+            "completed",
+            "hostname",
+            "selected",
+            "passed",
+            "failed",
+            "errors",
+            "score",
+            "coverage",
+        )
+
+        history_table = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            selectmode="browse",
+        )
+
+        headings = {
+            "completed": "Completed",
+            "hostname": "Hostname",
+            "selected": "Selected",
+            "passed": "Passed",
+            "failed": "Failed",
+            "errors": "Errors",
+            "score": "Score",
+            "coverage": "Coverage",
+        }
+
+        for column, heading_text in headings.items():
+            history_table.heading(
+                column,
+                text=heading_text,
+            )
+
+        history_table.column(
+            "completed",
+            width=180,
+        )
+        history_table.column(
+            "hostname",
+            width=130,
+        )
+        history_table.column(
+            "selected",
+            width=70,
+            anchor=tk.CENTER,
+        )
+        history_table.column(
+            "passed",
+            width=65,
+            anchor=tk.CENTER,
+        )
+        history_table.column(
+            "failed",
+            width=65,
+            anchor=tk.CENTER,
+        )
+        history_table.column(
+            "errors",
+            width=65,
+            anchor=tk.CENTER,
+        )
+        history_table.column(
+            "score",
+            width=90,
+            anchor=tk.CENTER,
+        )
+        history_table.column(
+            "coverage",
+            width=90,
+            anchor=tk.CENTER,
+        )
+
+        history_scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient=tk.VERTICAL,
+            command=history_table.yview,
+        )
+
+        history_table.configure(
+            yscrollcommand=history_scrollbar.set,
+        )
+
+        history_table.pack(
+            side=tk.LEFT,
+            fill=tk.BOTH,
+            expand=True,
+        )
+
+        history_scrollbar.pack(
+            side=tk.RIGHT,
+            fill=tk.Y,
+        )
+
+        for scan in scans:
+            score = scan["compliance_score"]
+
+            if score is None:
+                score_text = "N/A"
+            else:
+                score_text = f"{score:.2f}%"
+
+            coverage_text = (
+                f"{scan['coverage_percentage']:.2f}%"
+            )
+
+            history_table.insert(
+                "",
+                tk.END,
+                iid=scan["scan_id"],
+                values=(
+                    scan["completed_at_utc"],
+                    scan["hostname"],
+                    scan["selected_count"],
+                    scan["passed_count"],
+                    scan["failed_count"],
+                    scan["error_count"],
+                    score_text,
+                    coverage_text,
+                ),
+            )
+
+        controls_frame = ttk.Frame(outer_frame)
+        controls_frame.pack(
+            fill=tk.X,
+            pady=(10, 0),
+        )
+
+        def load_selected_scan() -> None:
+            selected_items = history_table.selection()
+
+            if not selected_items:
+                messagebox.showwarning(
+                    "No Scan Selected",
+                    "Select a historical scan first.",
+                    parent=history_window,
+                )
+                return
+
+            scan_id = selected_items[0]
+
+            try:
+                scan = get_scan(scan_id)
+            except Exception as exc:
+                messagebox.showerror(
+                    "Scan History Error",
+                    (
+                        "SecureAudit could not load the "
+                        f"selected scan.\n\n{exc}"
+                    ),
+                    parent=history_window,
+                )
+                return
+
+            if scan is None:
+                messagebox.showerror(
+                    "Scan History Error",
+                    "The selected scan no longer exists.",
+                    parent=history_window,
+                )
+                return
+
+            self._display_scan_results(scan)
+            history_window.destroy()
+
+        load_button = ttk.Button(
+            controls_frame,
+            text="Load Selected Scan",
+            command=load_selected_scan,
+        )
+        load_button.pack(side=tk.RIGHT)
+
+        history_table.bind(
+            "<Double-1>",
+            lambda event: load_selected_scan(),
+        )
+
+    def _report_path_for_scan(
+        self,
+        scan_id: str,
+    ) -> Path:
+        """Return the standard HTML report path for a scan."""
+
+        return (
+            Path("reports")
+            / f"secureaudit-{scan_id}.html"
+        )
+
+    def _open_current_report(self) -> None:
+        """Open or generate the report for the currently displayed scan."""
+
+        if self.current_scan_id is None:
+            messagebox.showwarning(
+                "No Scan Selected",
+                "Run or load a scan before opening a report.",
+            )
+            return
+
+        report_path = self.last_report_path
+
+        if report_path is None or not report_path.exists():
+            standard_report_path = self._report_path_for_scan(
+                self.current_scan_id
+            )
+
+            if standard_report_path.exists():
+                report_path = standard_report_path
+            else:
+                try:
+                    scan = get_scan(
+                        self.current_scan_id
+                    )
+                except Exception as exc:
+                    messagebox.showerror(
+                        "Report Error",
+                        (
+                            "SecureAudit could not load the "
+                            f"selected scan.\n\n{exc}"
+                        ),
+                    )
+                    return
+
+                if scan is None:
+                    messagebox.showerror(
+                        "Report Error",
+                        "The selected scan no longer exists.",
+                    )
+                    return
+
+                try:
+                    report_path = Path(
+                        write_html_report(scan)
+                    )
+                except Exception as exc:
+                    messagebox.showerror(
+                        "Report Error",
+                        (
+                            "SecureAudit could not generate "
+                            f"the HTML report.\n\n{exc}"
+                        ),
+                    )
+                    return
+
+        try:
+            os.startfile(
+                report_path.resolve()
+            )
+        except OSError as exc:
+            messagebox.showerror(
+                "Report Error",
+                (
+                    "Windows could not open the HTML report.\n\n"
+                    f"{exc}"
+                ),
+            )
+            return
+
+        self.last_report_path = report_path
+
+        self.report_status.configure(
+            text=f"Report: {report_path.resolve()}"
         )
 
 
