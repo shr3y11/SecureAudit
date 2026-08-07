@@ -18,6 +18,7 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any, Iterable
 
+from core.admin import ElevationRequestError, request_elevation
 from core.database import get_scan, list_scans, save_scan
 from core.reporting import write_html_report
 from core.scanner import load_catalog, run_check
@@ -1171,7 +1172,35 @@ class SecureAuditApp:
 
 
 def main() -> None:
-    """Launch the SecureAudit desktop application."""
+    """Launch SecureAudit with Windows Administrator privileges."""
+
+    try:
+        elevation_result = request_elevation()
+    except ElevationRequestError as exc:
+        messagebox.showerror(
+            "Administrator Elevation Error",
+            (
+                "SecureAudit could not request Administrator privileges.\n\n"
+                f"{exc}"
+            ),
+        )
+        return
+
+    if elevation_result == "started":
+        # Windows has started an elevated replacement process.
+        # The original non-elevated process must not create another GUI.
+        return
+
+    if elevation_result == "cancelled":
+        messagebox.showinfo(
+            "Administrator Permission Required",
+            (
+                "Administrator permission was not granted.\n\n"
+                "SecureAudit requires Administrator privileges to run "
+                "the complete Windows compliance assessment."
+            ),
+        )
+        return
 
     root = tk.Tk()
     SecureAuditApp(root)
