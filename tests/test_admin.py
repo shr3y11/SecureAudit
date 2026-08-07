@@ -4,7 +4,14 @@ from unittest.mock import patch
 
 import pytest
 
-from core.admin import AdminPrivilegeError, is_admin, is_windows
+from core.admin import (
+    AdminPrivilegeError,
+    ERROR_CANCELLED,
+    ElevationRequestError,
+    is_admin,
+    is_windows,
+    request_elevation,
+)
 
 
 def test_is_windows_returns_boolean():
@@ -13,9 +20,14 @@ def test_is_windows_returns_boolean():
     assert isinstance(is_windows(), bool)
 
 
-@patch("core.admin.is_windows", return_value=False)
-def test_is_admin_rejects_non_windows_platform(mock_is_windows):
-    """Administrator detection must not silently run on unsupported platforms."""
+@patch(
+    "core.admin.is_windows",
+    return_value=False,
+)
+def test_is_admin_rejects_non_windows_platform(
+    mock_is_windows,
+):
+    """Admin detection must reject unsupported platforms."""
 
     with pytest.raises(
         AdminPrivilegeError,
@@ -26,13 +38,19 @@ def test_is_admin_rejects_non_windows_platform(mock_is_windows):
     mock_is_windows.assert_called_once_with()
 
 
-@patch("core.admin.is_windows", return_value=True)
-@patch("core.admin.ctypes.windll.shell32.IsUserAnAdmin", return_value=1)
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
+@patch(
+    "core.admin.ctypes.windll.shell32.IsUserAnAdmin",
+    return_value=1,
+)
 def test_is_admin_returns_true_when_windows_reports_admin(
     mock_is_user_an_admin,
     mock_is_windows,
 ):
-    """A non-zero Windows result represents an elevated process."""
+    """A non-zero Windows result means the process is elevated."""
 
     assert is_admin() is True
 
@@ -40,13 +58,19 @@ def test_is_admin_returns_true_when_windows_reports_admin(
     mock_is_user_an_admin.assert_called_once_with()
 
 
-@patch("core.admin.is_windows", return_value=True)
-@patch("core.admin.ctypes.windll.shell32.IsUserAnAdmin", return_value=0)
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
+@patch(
+    "core.admin.ctypes.windll.shell32.IsUserAnAdmin",
+    return_value=0,
+)
 def test_is_admin_returns_false_when_windows_reports_standard_user(
     mock_is_user_an_admin,
     mock_is_windows,
 ):
-    """A zero Windows result represents a non-elevated process."""
+    """A zero Windows result means the process is not elevated."""
 
     assert is_admin() is False
 
@@ -54,16 +78,21 @@ def test_is_admin_returns_false_when_windows_reports_standard_user(
     mock_is_user_an_admin.assert_called_once_with()
 
 
-@patch("core.admin.is_windows", return_value=True)
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
 @patch(
     "core.admin.ctypes.windll.shell32.IsUserAnAdmin",
-    side_effect=OSError("Windows API failure"),
+    side_effect=OSError(
+        "Windows API failure"
+    ),
 )
 def test_is_admin_wraps_windows_api_failure(
     mock_is_user_an_admin,
     mock_is_windows,
 ):
-    """Windows API failures must produce a controlled SecureAudit error."""
+    """Windows API failures become controlled SecureAudit errors."""
 
     with pytest.raises(
         AdminPrivilegeError,
@@ -73,3 +102,140 @@ def test_is_admin_wraps_windows_api_failure(
 
     mock_is_windows.assert_called_once_with()
     mock_is_user_an_admin.assert_called_once_with()
+
+
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
+@patch(
+    "core.admin.is_admin",
+    return_value=True,
+)
+def test_request_elevation_does_nothing_when_already_admin(
+    mock_is_admin,
+    mock_is_windows,
+):
+    """An already elevated process must not request elevation again."""
+
+    assert request_elevation() == "already_elevated"
+
+    mock_is_windows.assert_called_once_with()
+    mock_is_admin.assert_called_once_with()
+
+
+@patch(
+    "core.admin._launch_elevated",
+    return_value=(True, 0),
+)
+@patch(
+    "core.admin._build_relaunch_command",
+    return_value=(
+        r"C:\Python\python.exe",
+        r'"C:\SecureAudit\app.py"',
+    ),
+)
+@patch(
+    "core.admin.is_admin",
+    return_value=False,
+)
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
+def test_request_elevation_reports_started_when_windows_accepts(
+    mock_is_windows,
+    mock_is_admin,
+    mock_build_command,
+    mock_launch_elevated,
+):
+    """Approved elevation starts an elevated replacement."""
+
+    result = request_elevation()
+
+    assert result == "started"
+
+    mock_launch_elevated.assert_called_once_with(
+        r"C:\Python\python.exe",
+        r'"C:\SecureAudit\app.py"',
+    )
+
+
+@patch(
+    "core.admin._launch_elevated",
+    return_value=(False, ERROR_CANCELLED),
+)
+@patch(
+    "core.admin._build_relaunch_command",
+    return_value=(
+        r"C:\Python\python.exe",
+        r'"C:\SecureAudit\app.py"',
+    ),
+)
+@patch(
+    "core.admin.is_admin",
+    return_value=False,
+)
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
+def test_request_elevation_handles_uac_cancellation_cleanly(
+    mock_is_windows,
+    mock_is_admin,
+    mock_build_command,
+    mock_launch_elevated,
+):
+    """Cancelling the UAC dialog is not an application crash."""
+
+    assert request_elevation() == "cancelled"
+
+
+@patch(
+    "core.admin._launch_elevated",
+    return_value=(False, 5),
+)
+@patch(
+    "core.admin._build_relaunch_command",
+    return_value=(
+        r"C:\Python\python.exe",
+        r'"C:\SecureAudit\app.py"',
+    ),
+)
+@patch(
+    "core.admin.is_admin",
+    return_value=False,
+)
+@patch(
+    "core.admin.is_windows",
+    return_value=True,
+)
+def test_request_elevation_raises_for_unexpected_windows_failure(
+    mock_is_windows,
+    mock_is_admin,
+    mock_build_command,
+    mock_launch_elevated,
+):
+    """Unexpected Windows failures must not be treated as cancellation."""
+
+    with pytest.raises(
+        ElevationRequestError,
+        match="Windows error code: 5",
+    ):
+        request_elevation()
+
+
+@patch(
+    "core.admin.is_windows",
+    return_value=False,
+)
+def test_request_elevation_rejects_non_windows_platform(
+    mock_is_windows,
+):
+    """SecureAudit must not attempt Windows elevation elsewhere."""
+
+    with pytest.raises(
+        ElevationRequestError,
+        match="supported only on Windows",
+    ):
+        request_elevation()
