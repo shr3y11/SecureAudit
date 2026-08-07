@@ -20,6 +20,7 @@ from typing import Any, Iterable
 
 from core.admin import ElevationRequestError, request_elevation
 from core.database import get_scan, list_scans, save_scan
+from core.paths import reports_directory
 from core.reporting import write_html_report
 from core.scanner import load_catalog, run_check
 from core.scoring import calculate_score
@@ -1091,7 +1092,7 @@ class SecureAuditApp:
         """Return the standard HTML report path for a scan."""
 
         return (
-            Path("reports")
+            reports_directory()
             / f"secureaudit-{scan_id}.html"
         )
 

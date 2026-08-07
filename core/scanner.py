@@ -21,10 +21,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Final
 
-
-PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parent.parent
-DEFAULT_CATALOG_PATH: Final[Path] = PROJECT_ROOT / "checks" / "catalog.json"
-DEFAULT_SCRIPT_DIRECTORY: Final[Path] = PROJECT_ROOT / "checks" / "powershell"
+from core.paths import (
+    catalog_path as default_catalog_path,
+    powershell_directory as default_powershell_directory,
+)
 
 DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
 ALLOWED_STATUSES: Final[frozenset[str]] = frozenset({"Pass", "Fail", "Error"})
@@ -105,7 +105,12 @@ def load_catalog(catalog_path: Path | None = None) -> dict[str, Any]:
         CatalogError: If the file is missing, unreadable, malformed, or invalid.
     """
 
-    path = (catalog_path or DEFAULT_CATALOG_PATH).resolve()
+    if catalog_path is None:
+        resolved_catalog_path = default_catalog_path()
+    else:
+        resolved_catalog_path = Path(catalog_path)
+
+    path = resolved_catalog_path.resolve()
 
     if not path.is_file():
         raise CatalogError(f"Check catalog was not found: {path}")
@@ -229,9 +234,12 @@ def resolve_approved_script(
         ScriptSecurityError: If the script path is unsafe or invalid.
     """
 
-    approved_directory = (
-        script_directory or DEFAULT_SCRIPT_DIRECTORY
-    ).resolve()
+    if script_directory is None:
+        resolved_script_directory = default_powershell_directory()
+    else:
+        resolved_script_directory = Path(script_directory)
+
+    approved_directory = resolved_script_directory.resolve()
 
     script_value = check["script"]
     script_name = Path(script_value)
