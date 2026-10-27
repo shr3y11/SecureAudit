@@ -1,0 +1,169 @@
+{
+  "study_type": "finite-state computational evaluation; no Windows scans",
+  "python_version": "3.12.14",
+  "platform": "linux",
+  "catalog": [
+    "WIN-FW-001",
+    "WIN-DEF-001",
+    "WIN-BL-001",
+    "WIN-GUEST-001",
+    "WIN-SMB1-001"
+  ],
+  "thresholds_percent": [
+    60,
+    80,
+    100
+  ],
+  "full_selection": [
+    {
+      "ABOVE": 51,
+      "BELOW": 51,
+      "UNRESOLVED": 141,
+      "catalog_gate_positive": 16,
+      "rate_negative": 146,
+      "rate_positive": 96,
+      "rate_undefined": 1,
+      "selected_gate_positive": 16,
+      "selected_gate_unsupported": 0,
+      "stable_positive_with_incomplete_catalog": 35,
+      "states": 243,
+      "threshold_percent": 60,
+      "unsupported_negative": 95,
+      "unsupported_positive": 45
+    },
+    {
+      "ABOVE": 11,
+      "BELOW": 131,
+      "UNRESOLVED": 101,
+      "catalog_gate_positive": 6,
+      "rate_negative": 206,
+      "rate_positive": 36,
+      "rate_undefined": 1,
+      "selected_gate_positive": 6,
+      "selected_gate_unsupported": 0,
+      "stable_positive_with_incomplete_catalog": 5,
+      "states": 243,
+      "threshold_percent": 80,
+      "unsupported_negative": 75,
+      "unsupported_positive": 25
+    },
+    {
+      "ABOVE": 1,
+      "BELOW": 211,
+      "UNRESOLVED": 31,
+      "catalog_gate_positive": 1,
+      "rate_negative": 211,
+      "rate_positive": 31,
+      "rate_undefined": 1,
+      "selected_gate_positive": 1,
+      "selected_gate_unsupported": 0,
+      "stable_positive_with_incomplete_catalog": 0,
+      "states": 243,
+      "threshold_percent": 100,
+      "unsupported_negative": 0,
+      "unsupported_positive": 30
+    }
+  ],
+  "selection_and_errors": [
+    {
+      "ABOVE": 106,
+      "BELOW": 106,
+      "UNRESOLVED": 811,
+      "catalog_gate_positive": 16,
+      "rate_negative": 606,
+      "rate_positive": 386,
+      "rate_undefined": 31,
+      "selected_gate_positive": 96,
+      "selected_gate_unsupported": 45,
+      "stable_positive_with_incomplete_catalog": 90,
+      "states": 1023,
+      "threshold_percent": 60,
+      "unsupported_negative": 500,
+      "unsupported_positive": 280
+    },
+    {
+      "ABOVE": 16,
+      "BELOW": 376,
+      "UNRESOLVED": 631,
+      "catalog_gate_positive": 6,
+      "rate_negative": 776,
+      "rate_positive": 216,
+      "rate_undefined": 31,
+      "selected_gate_positive": 36,
+      "selected_gate_unsupported": 25,
+      "stable_positive_with_incomplete_catalog": 10,
+      "states": 1023,
+      "threshold_percent": 80,
+      "unsupported_negative": 400,
+      "unsupported_positive": 200
+    },
+    {
+      "ABOVE": 1,
+      "BELOW": 781,
+      "UNRESOLVED": 241,
+      "catalog_gate_positive": 1,
+      "rate_negative": 781,
+      "rate_positive": 211,
+      "rate_undefined": 31,
+      "selected_gate_positive": 31,
+      "selected_gate_unsupported": 30,
+      "stable_positive_with_incomplete_catalog": 0,
+      "states": 1023,
+      "threshold_percent": 100,
+      "unsupported_negative": 0,
+      "unsupported_positive": 210
+    }
+  ],
+  "selection_truth": [
+    {
+      "threshold_percent": 60,
+      "pairs": 992,
+      "positive_disagreements": 65,
+      "negative_disagreements": 175,
+      "incorrect_stable_decisions": 0
+    },
+    {
+      "threshold_percent": 80,
+      "pairs": 992,
+      "positive_disagreements": 105,
+      "negative_disagreements": 75,
+      "incorrect_stable_decisions": 0
+    },
+    {
+      "threshold_percent": 100,
+      "pairs": 992,
+      "positive_disagreements": 180,
+      "negative_disagreements": 0,
+      "incorrect_stable_decisions": 0
+    }
+  ],
+  "max_selection_overstatement_pp": 80.0,
+  "verification": {
+    "full_selection": {
+      "states": 243,
+      "count_classes": 21,
+      "binary_completions_checked": 1024,
+      "oracle_classifications_checked": 729,
+      "oracle_mismatches": 0,
+      "containment_violations": 0
+    },
+    "selection_and_errors": {
+      "states": 1023,
+      "count_classes": 55,
+      "binary_completions_checked": 7744,
+      "oracle_classifications_checked": 3069,
+      "oracle_mismatches": 0,
+      "containment_violations": 0
+    },
+    "resolution": {
+      "resolution_edges": 5110,
+      "nesting_violations": 0,
+      "stable_decision_reversals": 0
+    },
+    "adapter": {
+      "adapter_cases": 9,
+      "valid_cases": 2,
+      "rejected_invalid_cases": 7
+    }
+  }
+}

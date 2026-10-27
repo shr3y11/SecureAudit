@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import subprocess
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Final
 
 from core.paths import (
@@ -244,12 +244,12 @@ def resolve_approved_script(
     script_value = check["script"]
     script_name = Path(script_value)
 
-    if script_name.is_absolute():
+    if script_name.is_absolute() or PureWindowsPath(script_value).is_absolute():
         raise ScriptSecurityError(
             f"Absolute script paths are prohibited for check {check['id']}."
         )
 
-    if script_name.name != script_value:
+    if script_name.name != script_value or PureWindowsPath(script_value).name != script_value:
         raise ScriptSecurityError(
             f"Nested or traversing script paths are prohibited for "
             f"check {check['id']}: {script_value}"
@@ -422,7 +422,7 @@ def execute_powershell_script(
             timeout=timeout_seconds,
             check=False,
             shell=False,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except subprocess.TimeoutExpired as exc:
         raise ScriptTimeoutError(
