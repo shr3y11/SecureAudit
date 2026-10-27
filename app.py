@@ -24,6 +24,7 @@ from core.paths import reports_directory
 from core.reporting import write_html_report
 from core.scanner import load_catalog, run_check
 from core.scoring import calculate_score
+from core.evidence import make_context
 
 
 class ScanWorkflowError(RuntimeError):
@@ -71,6 +72,7 @@ def run_local_scan(
     """Run the complete local SecureAudit assessment workflow."""
 
     check_ids = _validate_selected_check_ids(selected_check_ids)
+    evidence_context = make_context(load_catalog(), check_ids)
 
     hostname = socket.gethostname()
     started_at_utc = _utc_now()
@@ -91,6 +93,7 @@ def run_local_scan(
         summary=summary,
         started_at_utc=started_at_utc,
         completed_at_utc=completed_at_utc,
+        evidence_context=evidence_context,
     )
 
     stored_scan = get_scan(scan_id)

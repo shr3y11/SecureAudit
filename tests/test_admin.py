@@ -80,8 +80,7 @@ def test_is_admin_rejects_non_windows_platform(
     return_value=True,
 )
 @patch(
-    "core.admin.ctypes.windll.shell32.IsUserAnAdmin",
-    return_value=1,
+    "core.admin.ctypes.windll", create=True,
 )
 def test_is_admin_returns_true_when_windows_reports_admin(
     mock_is_user_an_admin,
@@ -89,10 +88,11 @@ def test_is_admin_returns_true_when_windows_reports_admin(
 ):
     """A non-zero Windows result means the process is elevated."""
 
+    mock_is_user_an_admin.shell32.IsUserAnAdmin.return_value = 1
     assert is_admin() is True
 
     mock_is_windows.assert_called_once_with()
-    mock_is_user_an_admin.assert_called_once_with()
+    mock_is_user_an_admin.shell32.IsUserAnAdmin.assert_called_once_with()
 
 
 @patch(
@@ -100,8 +100,7 @@ def test_is_admin_returns_true_when_windows_reports_admin(
     return_value=True,
 )
 @patch(
-    "core.admin.ctypes.windll.shell32.IsUserAnAdmin",
-    return_value=0,
+    "core.admin.ctypes.windll", create=True,
 )
 def test_is_admin_returns_false_when_windows_reports_standard_user(
     mock_is_user_an_admin,
@@ -109,10 +108,11 @@ def test_is_admin_returns_false_when_windows_reports_standard_user(
 ):
     """A zero Windows result means the process is not elevated."""
 
+    mock_is_user_an_admin.shell32.IsUserAnAdmin.return_value = 0
     assert is_admin() is False
 
     mock_is_windows.assert_called_once_with()
-    mock_is_user_an_admin.assert_called_once_with()
+    mock_is_user_an_admin.shell32.IsUserAnAdmin.assert_called_once_with()
 
 
 @patch(
@@ -120,10 +120,7 @@ def test_is_admin_returns_false_when_windows_reports_standard_user(
     return_value=True,
 )
 @patch(
-    "core.admin.ctypes.windll.shell32.IsUserAnAdmin",
-    side_effect=OSError(
-        "Windows API failure"
-    ),
+    "core.admin.ctypes.windll", create=True,
 )
 def test_is_admin_wraps_windows_api_failure(
     mock_is_user_an_admin,
@@ -131,6 +128,7 @@ def test_is_admin_wraps_windows_api_failure(
 ):
     """Windows API failures become controlled SecureAudit errors."""
 
+    mock_is_user_an_admin.shell32.IsUserAnAdmin.side_effect = OSError("Windows API failure")
     with pytest.raises(
         AdminPrivilegeError,
         match="could not determine",
@@ -138,7 +136,7 @@ def test_is_admin_wraps_windows_api_failure(
         is_admin()
 
     mock_is_windows.assert_called_once_with()
-    mock_is_user_an_admin.assert_called_once_with()
+    mock_is_user_an_admin.shell32.IsUserAnAdmin.assert_called_once_with()
 
 
 @patch(
