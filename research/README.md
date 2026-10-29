@@ -55,3 +55,13 @@ identifies a catalog snapshot and does not authenticate the endpoint.
 See [Windows validation protocol](../docs/RESEARCH_VALIDATION.md). No real
 Windows ground-truth captures accompany this feature yet. Four existing
 PowerShell integration tests require a Windows runner.
+
+## Reproducibility of the committed artifacts
+
+Re-running `run_study.py` must reproduce `results/*.csv`,
+`results/summary.json` and `results/sha256.json` byte-for-byte on any
+machine — that diff is the reviewer's check on the numbers.
+Environment provenance (interpreter version, platform) is therefore
+written to `results/environment.json`, which is deliberately **not**
+part of the hashed set: it describes a run, not a result.
+`tests/test_research_reproducibility.py` enforces both properties.
