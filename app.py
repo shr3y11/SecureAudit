@@ -110,6 +110,39 @@ def run_local_scan(
     }
 
 
+def failed_check_ids(scan: dict[str, Any]) -> list[str]:
+    """Return the IDs of a stored scan's checks that did not pass."""
+
+    return [
+        result["check_id"]
+        for result in scan.get("results", [])
+        if result.get("status") in ("Fail", "Error")
+    ]
+
+
+def run_selective_rescan(previous_scan: dict[str, Any]) -> dict[str, Any]:
+    """Re-run only the checks that did not pass in a previous scan.
+
+    The result is a normal stored scan of that subset: its score and
+    coverage describe the re-scanned checks, not the whole machine, and
+    callers should present it that way. Bounds/evidence contexts, where
+    present, are recomputed by the normal scan workflow for the subset's
+    own selection.
+    """
+
+    check_ids = failed_check_ids(previous_scan)
+
+    if not check_ids:
+        raise ScanWorkflowError(
+            "The selected scan has no failed or errored checks to re-scan."
+        )
+
+    outcome = run_local_scan(check_ids)
+    outcome["rescanned_from"] = previous_scan.get("scan_id")
+    outcome["rescanned_check_ids"] = check_ids
+    return outcome
+
+
 def _load_enabled_checks() -> list[dict[str, Any]]:
     """Load enabled approved checks for display in the desktop interface."""
 
@@ -1079,6 +1112,62 @@ class SecureAuditApp:
             command=load_selected_scan,
         )
         load_button.pack(side=tk.RIGHT)
+
+        def rescan_failed_checks() -> None:
+            selected_items = history_table.selection()
+
+            if not selected_items:
+                messagebox.showwarning(
+                    "No Scan Selected",
+                    "Select a historical scan first.",
+                    parent=history_window,
+                )
+                return
+
+            try:
+                scan = get_scan(selected_items[0])
+            except Exception as exc:
+                messagebox.showerror(
+                    "Scan History Error",
+                    f"SecureAudit could not load the selected scan.\n\n{exc}",
+                    parent=history_window,
+                )
+                return
+
+            if scan is None:
+                messagebox.showerror(
+                    "Scan History Error",
+                    "The selected scan no longer exists.",
+                    parent=history_window,
+                )
+                return
+
+            check_ids = failed_check_ids(scan)
+
+            if not check_ids:
+                messagebox.showinfo(
+                    "Nothing to Re-scan",
+                    "Every check in the selected scan passed.",
+                    parent=history_window,
+                )
+                return
+
+            for check_id, variable in self.check_variables.items():
+                variable.set(check_id in check_ids)
+
+            self._update_selection_status()
+            history_window.destroy()
+            self.scan_status.set(
+                f"Re-scanning {len(check_ids)} check(s) that did not pass…"
+            )
+            self._run_selected_checks()
+
+        rescan_button = ttk.Button(
+            controls_frame,
+            text="Re-scan Failed Checks",
+            command=rescan_failed_checks,
+        )
+        rescan_button.pack(side=tk.RIGHT, padx=(0, 8))
 
         history_table.bind(
             "<Double-1>",
