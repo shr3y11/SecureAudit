@@ -329,8 +329,15 @@ def _render_result(result: Mapping[str, Any]) -> str:
 
 def build_html_report(
     scan: Mapping[str, Any],
+    *,
+    previous_scan: Mapping[str, Any] | None = None,
 ) -> str:
-    """Build and return a standalone HTML report for one stored scan."""
+    """Build and return a standalone HTML report for one stored scan.
+
+    When ``previous_scan`` is given, the report gains a "Changes since
+    previous scan" section computed by :mod:`core.scan_diff`, including
+    both scans' context snapshots when they have them.
+    """
 
     if not isinstance(scan, Mapping):
         raise ReportingError(
@@ -338,6 +345,33 @@ def build_html_report(
         )
 
     _validate_scan(scan)
+
+    diff_html = ""
+    if previous_scan is not None:
+        from core.scan_diff import diff_scans
+
+        try:
+            diff = diff_scans(previous_scan, scan)
+        except ValueError as exc:
+            raise ReportingError(f"Invalid previous scan for diff: {exc}") from exc
+        rows = "\n".join(
+            f"<tr><td>{_escape(t['check_id'])}</td><td>{_escape(t['before'] or '—')}</td>"
+            f"<td>{_escape(t['after'] or '—')}</td><td>{_escape(t['change'])}</td></tr>"
+            for t in diff["transitions"] if t["change"] != "unchanged"
+        ) or '<tr><td colspan="4">No check changed status.</td></tr>'
+        counts = diff["counts"]
+        diff_html = f"""
+        <section class="disclaimer" aria-label="Changes since previous scan">
+            <h2>Changes since previous scan</h2>
+            <p>Fixed: {counts['fixed']} · Regressed: {counts['regressed']} ·
+            Changed: {counts['changed']} · Added: {counts['added']} ·
+            Removed: {counts['removed']} · Unchanged: {counts['unchanged']}.</p>
+            <table>
+                <tr><th>Check</th><th>Before</th><th>After</th><th>Change</th></tr>
+                {rows}
+            </table>
+        </section>
+        """
 
     evidence_html = ""
     if "evidence_context" in scan:
@@ -721,6 +755,7 @@ def build_html_report(
         </section>
 
         {evidence_html}
+        {diff_html}
         <h2 class="section-heading">Technical assessment results</h2>
 
         <section aria-label="Technical assessment results">
@@ -750,10 +785,11 @@ def write_html_report(
     *,
     output_directory: str | Path = DEFAULT_REPORTS_DIRECTORY,
     filename: str | None = None,
+    previous_scan: Mapping[str, Any] | None = None,
 ) -> Path:
     """Generate a report, write it to disk, and return its path."""
 
-    report_html = build_html_report(scan)
+    report_html = build_html_report(scan, previous_scan=previous_scan)
 
     output_path = Path(output_directory)
     output_path.mkdir(
