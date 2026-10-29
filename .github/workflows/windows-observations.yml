@@ -124,17 +124,22 @@ jobs:
 
       - name: Publish captures to data branch
         if: always()
-        shell: powershell
+        shell: bash
         run: |
+          set -x
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git fetch origin data/windows-observations 2>$null
-          if ($LASTEXITCODE -eq 0) { git checkout data/windows-observations } else { git checkout -B data/windows-observations }
-          $dest = "windows-observations/run-$env:GITHUB_RUN_ID"
-          New-Item -ItemType Directory -Force $dest | Out-Null
-          Copy-Item -Recurse -Force captures/* $dest
+          if git ls-remote --exit-code --heads origin data/windows-observations >/dev/null 2>&1; then
+            git fetch origin data/windows-observations
+            git checkout data/windows-observations
+          else
+            git checkout -B data/windows-observations
+          fi
+          dest="windows-observations/run-${GITHUB_RUN_ID}"
+          mkdir -p "$dest"
+          cp -r captures/* "$dest"/
           git add windows-observations
-          git commit -m "data: genuine Windows observations from hosted runner (run $env:GITHUB_RUN_ID)"
+          git commit -m "data: genuine Windows observations from hosted runner (run ${GITHUB_RUN_ID})"
           git push origin data/windows-observations
 
       - uses: actions/upload-artifact@v4
