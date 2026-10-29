@@ -1,5 +1,6 @@
 """Windows desktop entry point and headless release smoke test."""
 import argparse
+import base64
 import json
 import logging
 import os
@@ -29,18 +30,86 @@ def configure_source_tk():
                 os.environ.setdefault(variable, str(library.resolve()))
 
 
+# access.key storage format. New keys are stored as
+#   DPAPI:<base64 of a Windows DPAPI blob>
+# DPAPI here uses the default current-user scope: only the same Windows
+# user on the same machine can decrypt it. That scope is the protection
+# boundary — another process running as the same user can still read the
+# key, and copying the file to another machine/user makes it useless.
+# Files without the prefix are legacy plaintext keys; they are still read
+# (and upgraded in place on Windows) so existing installs keep working.
+_DPAPI_PREFIX = "DPAPI:"
+
+
+def _dpapi_transform(data: bytes, *, protect: bool) -> bytes:
+    """Run one DPAPI protect/unprotect operation (Windows only)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class _DataBlob(ctypes.Structure):
+        _fields_ = [("cbData", wintypes.DWORD),
+                    ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+    buffer = ctypes.create_string_buffer(data, len(data))
+    in_blob = _DataBlob(len(data), ctypes.cast(buffer, ctypes.POINTER(ctypes.c_char)))
+    out_blob = _DataBlob()
+    crypt32 = ctypes.windll.crypt32
+    kernel32 = ctypes.windll.kernel32
+    function = crypt32.CryptProtectData if protect else crypt32.CryptUnprotectData
+    # CRYPTPROTECT_UI_FORBIDDEN = 0x1: never show a prompt from this process.
+    if not function(ctypes.byref(in_blob), None, None, None, None, 0x1, ctypes.byref(out_blob)):
+        raise OSError(f"DPAPI {'protect' if protect else 'unprotect'} failed")
+    try:
+        return ctypes.string_at(out_blob.pbData, out_blob.cbData)
+    finally:
+        kernel32.LocalFree(out_blob.pbData)
+
+
+def _dpapi_protect(data: bytes) -> bytes:
+    return _dpapi_transform(data, protect=True)
+
+
+def _dpapi_unprotect(data: bytes) -> bytes:
+    return _dpapi_transform(data, protect=False)
+
+
+def _encode_key(token: str) -> str:
+    if os.name == "nt":
+        return _DPAPI_PREFIX + base64.b64encode(_dpapi_protect(token.encode("utf-8"))).decode("ascii")
+    # Non-Windows development runs keep the legacy plaintext format; the
+    # packaged application is Windows-only, where DPAPI always applies.
+    return token
+
+
+def _decode_key(stored: str) -> str:
+    stored = stored.strip()
+    if stored.startswith(_DPAPI_PREFIX):
+        if os.name != "nt":
+            raise ValueError("access.key is DPAPI-protected and can only be read on Windows")
+        return _dpapi_unprotect(base64.b64decode(stored[len(_DPAPI_PREFIX):])).decode("utf-8").strip()
+    return stored
+
+
 def access_key(data_dir):
     path = data_dir / "access.key"
     if path.exists():
-        token = path.read_text(encoding="utf-8").strip()
+        stored = path.read_text(encoding="utf-8")
+        token = _decode_key(stored)
         if len(token) < 32:
             raise ValueError("Invalid access.key; restore the original key or remove it to generate a new one")
+        if not stored.strip().startswith(_DPAPI_PREFIX) and os.name == "nt":
+            # Upgrade a legacy plaintext key in place, best effort: a
+            # failed rewrite must not lock the user out of a valid key.
+            try:
+                path.write_text(_encode_key(token), encoding="utf-8")
+            except OSError:
+                pass
         return token
     token = secrets.token_hex(32)
     # Exclusive creation avoids overwriting a key during concurrent starts.
     try:
         with path.open("x", encoding="utf-8") as handle:
-            handle.write(token)
+            handle.write(_encode_key(token))
     except FileExistsError:
         return access_key(data_dir)
     return token
