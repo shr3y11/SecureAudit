@@ -1,0 +1,10 @@
+# SecureAudit hashes file bytes in several places that must agree across
+# machines: the research study's sha256.json, the catalog digest in scan
+# evidence contexts, and the catalog signature manifest. If a Windows
+# checkout silently converts LF to CRLF, every one of those hashes
+# changes even though no content changed. Pin line endings so a
+# checkout is byte-identical on every platform.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.zip binary
