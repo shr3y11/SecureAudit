@@ -186,6 +186,31 @@ def test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue(cl
     assert client.get("/api/jobs").json()[0]["kind"] == "local"
 
 
+def test_export_pagination_bounds_and_walks_assessments(client, endpoint):
+    for index in range(3):
+        body = payload()
+        body["submission_id"] = f"submission-page-{index}"
+        assert client.post(f"/api/endpoints/{endpoint}/evidence", json=body).status_code == 200
+
+    first = client.get("/api/export", params={"limit": 2, "offset": 0}).json()
+    assert first["pagination"] == {"limit": 2, "offset": 0, "returned": 2, "total": 3, "next_offset": 2}
+    assert len(first["assessments"]) == 2
+
+    second = client.get("/api/export", params={"limit": 2, "offset": first["pagination"]["next_offset"]}).json()
+    assert second["pagination"]["next_offset"] is None
+    assert len(second["assessments"]) == 1
+
+    seen = [a["submission_id"] for a in first["assessments"] + second["assessments"]]
+    assert sorted(seen) == [f"submission-page-{i}" for i in range(3)]
+
+    # The default export stays backward compatible for small data sets,
+    # and out-of-range paging parameters are rejected.
+    assert len(client.get("/api/export").json()["assessments"]) == 3
+    assert client.get("/api/export", params={"limit": 0}).status_code == 422
+    assert client.get("/api/export", params={"limit": 5001}).status_code == 422
+    assert client.get("/api/export", params={"offset": -1}).status_code == 422
+
+
 def test_demo_jobs_and_evidence_survive_restart(tmp_path):
     url = "sqlite:///" + (tmp_path / "persistent.db").as_posix()
     with TestClient(create_app(url, TOKEN, worker_enabled=False)) as c:
