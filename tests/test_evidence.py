@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from core.evidence import assess_evidence, assess_context, make_context
-from core.database import DatabaseError, get_scan, initialize_database, save_scan
+from core.database import DatabaseError, get_scan, initialize_database, list_scans, save_scan
 from core.reporting import build_html_report
 from core.scanner import load_catalog
 from core.scoring import calculate_score
@@ -188,3 +188,23 @@ def test_windows_runner_refuses_unsupported_host_before_creating_output(tmp_path
          patch.object(runner.sys, "argv", arguments), pytest.raises(SystemExit):
         runner.main()
     assert not output.exists()
+
+
+def test_list_scans_carries_evidence_summary_for_history_display(tmp_path):
+    context = make_context(load_catalog(), list(IDS))
+    scan, path = save(tmp_path, records("PPPPP"), context)
+    save(tmp_path, records("POOOO"))  # pre-extension scan, same database
+    listed = {row["scan_id"]: row for row in list_scans(path)}
+    assert listed[scan["scan_id"]]["evidence_summary"]["decision"] == "ABOVE"
+    old = [row for sid, row in listed.items() if sid != scan["scan_id"]][0]
+    assert "evidence_summary" not in old
+
+
+def test_format_baseline_decision_for_gui():
+    import app
+    assert app.format_baseline_decision({}) == "Not available"
+    assert app.format_baseline_decision({"evidence_summary": None}) == "Not available"
+    summary = assess_evidence(IDS, IDS, records("PPPPF"))
+    assert app.format_baseline_decision({"evidence_summary": summary}) == "ABOVE (80.00–80.00%)"
+    summary = assess_evidence(IDS, IDS[:1], records("POOOO"))
+    assert app.format_baseline_decision({"evidence_summary": summary}) == "UNRESOLVED (20.00–100.00%)"
