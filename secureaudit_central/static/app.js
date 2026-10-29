@@ -84,6 +84,29 @@ async function queueFleet(delay) {
   message(`${result.count} synthetic assessments scheduled for ${date(result.due_at)}. Evidence will arrive as jobs complete.`);
   setView('jobs'); await refresh();
 }
+function trendChart(assessments) {
+  // Assessments arrive newest-first; the chart reads oldest to newest.
+  const points = [...assessments].reverse();
+  if (points.length < 2) return '';
+  const width = 600, height = 170, pad = 28;
+  const series = (key, color, dash) => {
+    const valid = points.map((a, i) => [i, a[key]]).filter(([, v]) => v !== null && v !== undefined);
+    if (valid.length < 2) return '';
+    const coords = valid.map(([i, v]) => `${(pad + i * (width - 2 * pad) / (points.length - 1)).toFixed(1)},${(height - pad - v / 100 * (height - 2 * pad)).toFixed(1)}`).join(' ');
+    return `<polyline points="${coords}" fill="none" stroke="${color}" stroke-width="2" ${dash ? 'stroke-dasharray="5 4"' : ''}/>`;
+  };
+  return `<div class="trend-chart"><h3>Score and coverage over time</h3>
+  <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Trend chart of compliance score and assessment coverage">
+  <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="#888"/>
+  <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="#888"/>
+  ${series('score', '#2563eb', false)}
+  ${series('coverage', '#059669', true)}
+  <text x="${pad}" y="${height - 8}" font-size="11">${esc(date(points[0].collected_at))}</text>
+  <text x="${width - pad}" y="${height - 8}" font-size="11" text-anchor="end">${esc(date(points[points.length - 1].collected_at))}</text>
+  <text x="${pad}" y="16" font-size="11" fill="#2563eb">— Score</text>
+  <text x="${pad + 70}" y="16" font-size="11" fill="#059669">- - Coverage</text>
+  </svg></div>`;
+}
 function showAssessment(assessment) {
   $('assessment-body').innerHTML = `<p>Collected ${date(assessment.collected_at)} · Score ${pct(assessment.score)} · Coverage ${pct(assessment.coverage)} · Source: ${esc(assessment.source)}</p><p class="hash">SHA-256: ${esc(assessment.sha256)}</p>${assessment.checks.map(c=>`<article class="evidence-check"><h3><span>${esc(c.check_id)} · ${esc(c.title)}</span><span class="status ${esc(c.status)}">${esc(c.status)}</span></h3><pre>${esc(c.detail)}</pre></article>`).join('')}`;
 }
@@ -93,7 +116,7 @@ async function inspect(id) {
   $('evidence-title').textContent = activeEndpoint.hostname;
   $('evidence-source').textContent = activeEndpoint.simulated ? 'SIMULATED ENDPOINT · Synthetic fixtures only; no physical device was scanned.' : 'REGISTERED ENDPOINT · Local scanner or imported evidence. Administrative privileges affect collection coverage.';
   const assessments = await api(`/api/endpoints/${id}/history`);
-  $('evidence-content').innerHTML = assessments.length ? `<select id="history-picker" class="history-picker" aria-label="Assessment history">${assessments.map((a,i)=>`<option value="${i}">${date(a.collected_at)} · ${esc(a.submission_id)}</option>`).join('')}</select><div id="assessment-body"></div>` : '<p class="empty">No evidence yet. Import a central evidence JSON file, or use Scan this PC for the current machine.</p>';
+  $('evidence-content').innerHTML = assessments.length ? `<select id="history-picker" class="history-picker" aria-label="Assessment history">${assessments.map((a,i)=>`<option value="${i}">${date(a.collected_at)} · ${esc(a.submission_id)}</option>`).join('')}</select>${trendChart(assessments)}<div id="assessment-body"></div>` : '<p class="empty">No evidence yet. Import a central evidence JSON file, or use Scan this PC for the current machine.</p>';
   if (assessments.length) { showAssessment(assessments[0]); $('history-picker').addEventListener('change',e=>showAssessment(assessments[Number(e.target.value)])); }
   if (!$('evidence-dialog').open) $('evidence-dialog').showModal();
 }
