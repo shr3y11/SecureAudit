@@ -618,9 +618,37 @@ def list_scans(
                 query,
                 (limit,),
             ).fetchall()
+
+            scans = [dict(row) for row in rows]
+
+            # Attach the recomputed evidence summary where a scan has a
+            # stored context, so list views (e.g. scan history) can show
+            # the baseline decision without opening each scan. Unlike
+            # get_scan, listing degrades gracefully: a context that no
+            # longer validates leaves the summary absent instead of
+            # making the whole history unreadable.
+            for scan in scans:
+                context_row = connection.execute(
+                    "SELECT context_json FROM scan_evidence_context WHERE scan_id = ?",
+                    (scan["scan_id"],),
+                ).fetchone()
+                if context_row is None:
+                    continue
+                result_rows = connection.execute(
+                    "SELECT check_id, status FROM scan_results WHERE scan_id = ?",
+                    (scan["scan_id"],),
+                ).fetchall()
+                try:
+                    context = json.loads(context_row["context_json"])
+                    scan["evidence_summary"] = assess_context(
+                        context,
+                        [dict(row) for row in result_rows],
+                    )
+                except (ValueError, TypeError):
+                    continue
     except sqlite3.Error as exc:
         raise DatabaseError(
             f"Could not list stored scans: {exc}"
         ) from exc
 
-    return [dict(row) for row in rows]
+    return scans
