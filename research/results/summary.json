@@ -1,7 +1,5 @@
 {
   "study_type": "finite-state computational evaluation; no Windows scans",
-  "python_version": "3.12.14",
-  "platform": "linux",
   "catalog": [
     "WIN-FW-001",
     "WIN-DEF-001",

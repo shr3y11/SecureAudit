@@ -253,7 +253,6 @@ def main():
         write_csv(DATA / filename, rows)
     summary = {
         "study_type": "finite-state computational evaluation; no Windows scans",
-        "python_version": platform.python_version(), "platform": sys.platform,
         "catalog": CHECKS, "thresholds_percent": [60, 80, 100],
         "full_selection": full_summary, "selection_and_errors": all_summary,
         "selection_truth": selection_summary,
@@ -262,10 +261,18 @@ def main():
                          "resolution": resolution, "adapter": adapter},
     }
     (DATA / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    # Provenance, deliberately kept OUT of summary.json and sha256.json:
+    # the interpreter/platform describe the run, not the results. When
+    # they were embedded in the summary, every environment produced a
+    # different summary (and therefore different hashes), so re-running
+    # the study could never reproduce the committed artifacts byte-for-
+    # byte even when every number matched.
+    environment = {"python_version": platform.python_version(), "platform": sys.platform}
+    (DATA / "environment.json").write_text(json.dumps(environment, indent=2) + "\n", encoding="utf-8")
     files = [Path(__file__), *sorted(DATA.glob("*.csv")), DATA / "summary.json"]
     hashes = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
     (DATA / "sha256.json").write_text(json.dumps(hashes, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(summary, indent=2))
+    print(json.dumps({"environment": environment, **summary}, indent=2))
 
 
 if __name__ == "__main__":
