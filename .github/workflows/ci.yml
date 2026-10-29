@@ -44,9 +44,15 @@ jobs:
       # listed so the gap stays visible. PR #8 carries portability fixes
       # for several of them; remove the corresponding deselects as those
       # land on main.
+      # Coverage is measured and reported in the same run, not gated:
+      # the first measured baseline (Linux, Oct 2026) is 64% overall,
+      # with app.py at 15% (Tkinter GUI paths) as the known weak spot.
+      # Add a fail-under gate only once the GUI is covered.
       - if: runner.os != 'Windows'
         run: >-
           python -m pytest -q
+          --cov=core --cov=secureaudit_central --cov=app --cov=launcher
+          --cov-report=term-missing:skip-covered
           --deselect tests/test_admin.py::test_is_admin_returns_true_when_windows_reports_admin
           --deselect tests/test_admin.py::test_is_admin_returns_false_when_windows_reports_standard_user
           --deselect tests/test_admin.py::test_is_admin_wraps_windows_api_failure
