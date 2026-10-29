@@ -205,6 +205,21 @@ def test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue(cl
     assert client.get("/api/jobs").json()[0]["kind"] == "local"
 
 
+def test_trends_series_is_oldest_first_with_scores(client, endpoint):
+    base = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    for index, statuses in enumerate((("Pass", "Pass"), ("Pass", "Fail"), ("Fail", "Fail"))):
+        body = payload(statuses)
+        body["submission_id"] = f"trend-{index}"
+        body["collected_at"] = (base + timedelta(days=index)).isoformat()
+        assert client.post(f"/api/endpoints/{endpoint}/evidence", json=body).status_code == 200
+
+    series = client.get(f"/api/endpoints/{endpoint}/trends").json()
+    assert series["endpoint_id"] == endpoint
+    assert [p["score"] for p in series["points"]] == [100.0, 50.0, 0.0]
+    assert [p["coverage"] for p in series["points"]] == [100.0, 100.0, 100.0]
+    assert series["points"][0]["collected_at"] < series["points"][-1]["collected_at"]
+    assert client.get("/api/endpoints/does-not-exist/trends").status_code == 404
+
 def test_evidence_bundle_is_self_verifying(client, endpoint):
     """A reviewer must be able to verify the bundle without the app."""
     import hashlib

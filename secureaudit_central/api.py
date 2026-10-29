@@ -282,6 +282,24 @@ def create_app(database_url, api_token, *, worker_enabled=True):
         return [assessment_dict(a, True) for a in session.scalars(select(Assessment).where(
             Assessment.endpoint_id == endpoint_id).order_by(Assessment.collected_at.desc(), Assessment.received_at.desc()).limit(100))]
 
+    @app.get("/api/endpoints/{endpoint_id}/trends", dependencies=protected)
+    def trends(endpoint_id: str, session: Session = Depends(db)):
+        """Score/coverage time series for one endpoint, oldest first.
+
+        History access already existed (the /history endpoint and the
+        dashboard picker); this series is what trend charts draw. Points
+        are the stored assessments themselves — nothing is resampled or
+        smoothed, and a score is null where no check could be assessed.
+        """
+        if session.get(Endpoint, endpoint_id) is None:
+            raise HTTPException(404, "Endpoint not found")
+        rows = session.scalars(select(Assessment).where(
+            Assessment.endpoint_id == endpoint_id).order_by(
+            Assessment.collected_at.asc(), Assessment.received_at.asc()).limit(500)).all()
+        points = [{"collected_at": a.collected_at, **{key: assessment_dict(a)[key]
+                   for key in ("score", "coverage", "passed", "failed", "errors")}} for a in rows]
+        return {"endpoint_id": endpoint_id, "points": points}
+
     @app.get("/api/endpoints/{endpoint_id}/bundle", dependencies=protected)
     def evidence_bundle(endpoint_id: str, session: Session = Depends(db)):
         """Download one endpoint's evidence as a self-verifying ZIP bundle.
