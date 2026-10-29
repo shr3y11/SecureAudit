@@ -1,0 +1,85 @@
+name: CI
+
+# main previously had no CI at all (the workflows folder held only
+# .gitkeep). This workflow tests the whole current platform: the M4
+# desktop workflow AND M5 Central. PR #8's research-validation workflow
+# covers only the M4 branch it targets; the two are complementary.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python: "3.12"
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: ubuntu-latest
+            python: "3.11"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -r requirements-dev.txt
+      # Windows runs the full suite, including the real PowerShell
+      # execution tests.
+      - if: runner.os == 'Windows'
+        run: python -m pytest -q
+      # On Linux, 11 tests are bound to Windows-only behaviour
+      # (ctypes.windll admin checks, subprocess.CREATE_NO_WINDOW in the
+      # scanner, and the Windows-only local-scan path in Central). They
+      # are deselected explicitly -- not skipped silently -- and each is
+      # listed so the gap stays visible. PR #8 carries portability fixes
+      # for several of them; remove the corresponding deselects as those
+      # land on main.
+      - if: runner.os != 'Windows'
+        run: >-
+          python -m pytest -q
+          --deselect tests/test_admin.py::test_is_admin_returns_true_when_windows_reports_admin
+          --deselect tests/test_admin.py::test_is_admin_returns_false_when_windows_reports_standard_user
+          --deselect tests/test_admin.py::test_is_admin_wraps_windows_api_failure
+          --deselect tests/test_central.py::test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue
+          --deselect tests/test_central.py::test_failed_scanner_creates_failed_job_not_false_evidence
+          --deselect tests/test_scanner.py::test_absolute_script_path_is_rejected
+          --deselect tests/test_scanner.py::test_traversal_script_path_is_rejected
+          --deselect tests/test_scanner.py::test_invalid_json_becomes_error_result
+          --deselect tests/test_scanner.py::test_timeout_becomes_error_result
+          --deselect tests/test_scanner.py::test_valid_result_is_normalized
+          --deselect tests/test_scanner.py::test_result_check_id_mismatch_becomes_error
+
+  postgres:
+    # The PostgreSQL integration test self-skips without this variable;
+    # CI provides a disposable database so it actually runs.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      SECUREAUDIT_TEST_POSTGRES_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest tests/test_central_postgres.py -q
