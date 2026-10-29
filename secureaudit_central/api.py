@@ -14,7 +14,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import create_engine, event, select, update
+from sqlalchemy import create_engine, event, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -350,11 +350,25 @@ def create_app(database_url, api_token, *, worker_enabled=True):
             select(Event).order_by(Event.at.desc(), Event.id).limit(100))]
 
     @app.get("/api/export", dependencies=protected)
-    def export(session: Session = Depends(db)):
+    def export(session: Session = Depends(db), limit: int = 500, offset: int = 0):
+        # The full export previously returned every assessment at once.
+        # Assessments are now paged (bounded, like /history and /jobs);
+        # follow `next_offset` until it is null to walk the whole set.
+        # Endpoints stay complete: that list is bounded by fleet size and
+        # carries only each endpoint's latest assessment.
+        if not 1 <= limit <= 5000:
+            raise HTTPException(422, "limit must be between 1 and 5000")
+        if offset < 0:
+            raise HTTPException(422, "offset must be >= 0")
+        total = session.scalar(select(func.count()).select_from(Assessment)) or 0
+        page = session.scalars(select(Assessment).order_by(Assessment.received_at, Assessment.id)
+                               .offset(offset).limit(limit)).all()
         return {"product": "SecureAudit Central", "version": __version__, "exported_at": now(),
                 "notice": "Simulated endpoints are synthetic fixtures. Imported evidence is not independently verified.",
                 "endpoints": endpoint_rows(session),
-                "assessments": [assessment_dict(a, True) for a in session.scalars(select(Assessment).order_by(Assessment.received_at))]}
+                "assessments": [assessment_dict(a, True) for a in page],
+                "pagination": {"limit": limit, "offset": offset, "returned": len(page), "total": total,
+                               "next_offset": offset + len(page) if offset + len(page) < total else None}}
 
     @app.get("/api/export.csv", dependencies=protected)
     def export_csv(session: Session = Depends(db)):
