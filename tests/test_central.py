@@ -205,6 +205,37 @@ def test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue(cl
     assert client.get("/api/jobs").json()[0]["kind"] == "local"
 
 
+def test_verify_endpoint_detects_evidence_tampering(client, endpoint, tmp_path):
+    """The stored hash only detects tampering once something recomputes it."""
+    import sqlite3
+
+    assert client.post(f"/api/endpoints/{endpoint}/evidence", json=payload()).status_code == 200
+    clean = client.get(f"/api/endpoints/{endpoint}/verify").json()
+    assert clean == {"endpoint_id": endpoint, "checked": 1, "mismatches": [], "ok": True}
+    assert client.get("/api/endpoints/does-not-exist/verify").status_code == 404
+
+    # Attacker with database write access edits the stored evidence but
+    # leaves the recorded hash untouched.
+    db_path = next(tmp_path.glob("*.db"))
+    with sqlite3.connect(db_path) as db:
+        db.execute("UPDATE central_assessments SET evidence_json = replace(evidence_json, '\"Pass\"', '\"Fail\"')")
+    dirty = client.get(f"/api/endpoints/{endpoint}/verify").json()
+    assert dirty["ok"] is False
+    assert dirty["mismatches"] == ["submission-001"]
+
+    # The same attacker reforges the hash to match: internal verification
+    # can no longer see the edit. This is a documented limit, not a bug —
+    # detection then requires an external reference (bundle/checkpoint).
+    with sqlite3.connect(db_path) as db:
+        rows = db.execute("SELECT id, evidence_json FROM central_assessments").fetchall()
+        for row_id, evidence_json in rows:
+            import hashlib
+            db.execute("UPDATE central_assessments SET sha256 = ? WHERE id = ?",
+                       (hashlib.sha256(evidence_json.encode()).hexdigest(), row_id))
+    reforged = client.get(f"/api/endpoints/{endpoint}/verify").json()
+    assert reforged["ok"] is True, "reforged hashes are the documented blind spot of internal verification"
+
+
 def test_trends_series_is_oldest_first_with_scores(client, endpoint):
     base = datetime(2026, 10, 1, tzinfo=timezone.utc)
     for index, statuses in enumerate((("Pass", "Pass"), ("Pass", "Fail"), ("Fail", "Fail"))):

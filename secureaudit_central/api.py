@@ -300,6 +300,28 @@ def create_app(database_url, api_token, *, worker_enabled=True):
                    for key in ("score", "coverage", "passed", "failed", "errors")}} for a in rows]
         return {"endpoint_id": endpoint_id, "points": points}
 
+    @app.get("/api/endpoints/{endpoint_id}/verify", dependencies=protected)
+    def verify_evidence(endpoint_id: str, session: Session = Depends(db)):
+        """Recompute every stored evidence hash and report mismatches.
+
+        Central records a SHA-256 of the canonical evidence at
+        submission time, but recording a hash detects nothing until
+        something recomputes it. This endpoint is that recomputation:
+        it detects edits to the stored evidence that left the recorded
+        hash untouched. It cannot detect an attacker who rewrites both
+        the evidence and its hash — that requires an external reference
+        (an exported bundle or checkpoint), which the tamper-lab
+        experiments in research/tamper_lab.py quantify.
+        """
+        if session.get(Endpoint, endpoint_id) is None:
+            raise HTTPException(404, "Endpoint not found")
+        rows = session.scalars(select(Assessment).where(
+            Assessment.endpoint_id == endpoint_id)).all()
+        mismatches = [a.submission_id for a in rows
+                      if hashlib.sha256(a.evidence_json.encode("utf-8")).hexdigest() != a.sha256]
+        return {"endpoint_id": endpoint_id, "checked": len(rows),
+                "mismatches": mismatches, "ok": not mismatches}
+
     @app.get("/api/endpoints/{endpoint_id}/bundle", dependencies=protected)
     def evidence_bundle(endpoint_id: str, session: Session = Depends(db)):
         """Download one endpoint's evidence as a self-verifying ZIP bundle.

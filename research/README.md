@@ -65,3 +65,16 @@ Environment provenance (interpreter version, platform) is therefore
 written to `results/environment.json`, which is deliberately **not**
 part of the hashed set: it describes a run, not a result.
 `tests/test_research_reproducibility.py` enforces both properties.
+
+## Tamper Lab
+
+`tamper_lab.py` measures what Central's evidence integrity actually
+detects under an explicit attacker model (write access to the
+database file or an exported bundle). Seven experiments — modify,
+modify+reforge, delete, three replay shapes, and bundle forgery —
+compare Central's internal hash verification against an external
+checkpoint. Results are committed in `results/tamper_lab_results.json`
+and pinned by `tests/test_tamper_lab.py`. The honest headline:
+internal verification catches naive edits; reforging and deletion are
+invisible to it and are caught only by a reference outside the
+attacker's reach.
