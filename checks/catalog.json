@@ -20,7 +20,8 @@
         "Windows 10",
         "Windows 11",
         "Windows Server 2019",
-        "Windows Server 2022"
+        "Windows Server 2022",
+        "Windows Server 2025"
       ],
       "remediation": "Enable the Domain, Private, and Public Windows Firewall profiles through Windows Security, Group Policy, or an approved administrative configuration method.",
       "version": "1.0.0",
@@ -42,7 +43,8 @@
         "Windows 10",
         "Windows 11",
         "Windows Server 2019",
-        "Windows Server 2022"
+        "Windows Server 2022",
+        "Windows Server 2025"
       ],
       "remediation": "Enable Microsoft Defender Antivirus or confirm that an approved third-party antivirus product is intentionally managing endpoint protection.",
       "version": "1.0.0",
@@ -64,7 +66,8 @@
         "Windows 10",
         "Windows 11",
         "Windows Server 2019",
-        "Windows Server 2022"
+        "Windows Server 2022",
+        "Windows Server 2025"
       ],
       "remediation": "Enable BitLocker on the operating-system drive and securely back up the recovery key using an approved organizational process.",
       "version": "1.0.0",
@@ -86,7 +89,8 @@
         "Windows 10",
         "Windows 11",
         "Windows Server 2019",
-        "Windows Server 2022"
+        "Windows Server 2022",
+        "Windows Server 2025"
       ],
       "remediation": "Disable the built-in Guest account through Local Users and Groups, PowerShell, or an approved Group Policy configuration.",
       "version": "1.0.0",
@@ -108,7 +112,8 @@
         "Windows 10",
         "Windows 11",
         "Windows Server 2019",
-        "Windows Server 2022"
+        "Windows Server 2022",
+        "Windows Server 2025"
       ],
       "remediation": "Disable the SMB 1.0/CIFS feature unless a documented and approved legacy dependency requires it.",
       "version": "1.0.0",
