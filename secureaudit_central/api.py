@@ -26,13 +26,16 @@ from core.scoring import calculate_score
 from .scanner_bridge import collect_local_evidence
 
 ASSETS = Path(__file__).parent / "static"
+# Demo check IDs and severities mirror checks/catalog.json exactly.
+# The demo generates synthetic evidence for these real catalog checks;
+# it must never invent IDs (e.g. WIN-AV-001, WIN-UPDATE-001) that have
+# no collector in the catalog.
 DEMO_CHECKS = [
     ("WIN-FW-001", "Windows firewall", "High"),
+    ("WIN-DEF-001", "Microsoft Defender antivirus", "High"),
     ("WIN-BL-001", "Disk encryption", "High"),
-    ("WIN-SMB1-001", "SMBv1 disabled", "High"),
-    ("WIN-AV-001", "Antivirus protection", "High"),
     ("WIN-GUEST-001", "Guest account disabled", "Medium"),
-    ("WIN-UPDATE-001", "Security update posture", "Medium"),
+    ("WIN-SMB1-001", "SMBv1 disabled", "Critical"),
 ]
 
 

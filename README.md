@@ -38,7 +38,7 @@ SecureAudit V1 is designed as a **standalone Windows desktop MVP**. It performs 
 - Standalone HTML reports
 - PyInstaller one-file packaging
 - Persistent packaged data under `%LOCALAPPDATA%\SecureAudit`
-- 89 automated tests passing on the development machine
+- Automated test suite covering the scanner, scoring, database, reporting, desktop workflow and Central API
 
 ## Application Workflow
 
@@ -141,11 +141,10 @@ SecureAudit will request Windows administrator elevation when required.
 python -m pytest -v
 ```
 
-Latest verified development-machine result:
-
-```text
-89 passed
-```
+The full suite is expected to pass on Windows. A small number of tests
+exercise real PowerShell execution and are skipped where `powershell.exe`
+is unavailable. (A fixed pass count is deliberately not recorded here:
+it went stale as the suite grew.)
 
 A recurring Windows pytest temporary-directory cleanup warning may appear after the successful result. It occurs during pytest exit cleanup and has not invalidated the completed test suite.
 

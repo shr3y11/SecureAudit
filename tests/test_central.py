@@ -57,6 +57,25 @@ def test_short_key_rejected(tmp_path):
         create_app("sqlite:///" + (tmp_path / "db").as_posix(), "short")
 
 
+def test_demo_checks_match_real_catalog():
+    """Demo fixtures must never invent check IDs or severities.
+
+    The synthetic demo previously used WIN-AV-001 and WIN-UPDATE-001,
+    which have no collector in the approved catalog. Demo evidence is
+    synthetic, but the checks it claims to represent must be real.
+    """
+    from core.scanner import load_catalog
+    from secureaudit_central.api import DEMO_CHECKS
+
+    catalog = {check["id"]: check for check in load_catalog()["checks"]}
+    assert DEMO_CHECKS, "demo check list must not be empty"
+    for check_id, _title, severity in DEMO_CHECKS:
+        assert check_id in catalog, f"demo check {check_id} is not in the catalog"
+        assert severity == catalog[check_id]["severity"], (
+            f"demo severity for {check_id} differs from the catalog"
+        )
+
+
 def test_registration_duplicate_and_unknown_fields(client, endpoint):
     assert client.post("/api/endpoints", json={"hostname": "TEST-PC-01"}).status_code == 409
     assert client.post("/api/endpoints", json={"hostname": "PC", "simulated": True}).status_code == 422
