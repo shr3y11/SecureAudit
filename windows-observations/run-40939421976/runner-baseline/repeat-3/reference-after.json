@@ -1,0 +1,95 @@
+{
+  "captured_at_utc": "2026-10-29T19:23:21.6597837Z",
+  "os": {
+    "ok": true,
+    "error": null,
+    "values": [
+      {
+        "Caption": "Microsoft Windows Server 2025 Datacenter",
+        "Version": "10.0.26100",
+        "BuildNumber": "26100"
+      }
+    ]
+  },
+  "firewall": {
+    "ok": true,
+    "error": null,
+    "values": [
+      {
+        "Name": "Domain",
+        "Enabled": 1
+      },
+      {
+        "Name": "Private",
+        "Enabled": 1
+      },
+      {
+        "Name": "Public",
+        "Enabled": 1
+      }
+    ]
+  },
+  "defender": {
+    "ok": true,
+    "error": null,
+    "values": [
+      {
+        "AMServiceEnabled": true,
+        "AntivirusEnabled": true,
+        "RealTimeProtectionEnabled": false
+      }
+    ]
+  },
+  "bitlocker": {
+    "ok": true,
+    "error": null,
+    "values": [
+      {
+        "MountPoint": "C:",
+        "ProtectionStatus": 0,
+        "VolumeStatus": 0
+      }
+    ]
+  },
+  "guest": {
+    "ok": true,
+    "error": null,
+    "values": [
+      {
+        "Name": "Guest",
+        "Enabled": false,
+        "SID": {
+          "BinaryLength": 28,
+          "AccountDomainSid": {
+            "BinaryLength": 24,
+            "AccountDomainSid": {
+              "BinaryLength": 24,
+              "AccountDomainSid": {
+                "BinaryLength": 24,
+                "AccountDomainSid": {
+                  "BinaryLength": 24,
+                  "AccountDomainSid": "S-1-5-21-3776380004-1005456608-3524014338",
+                  "Value": "S-1-5-21-3776380004-1005456608-3524014338"
+                },
+                "Value": "S-1-5-21-3776380004-1005456608-3524014338"
+              },
+              "Value": "S-1-5-21-3776380004-1005456608-3524014338"
+            },
+            "Value": "S-1-5-21-3776380004-1005456608-3524014338"
+          },
+          "Value": "S-1-5-21-3776380004-1005456608-3524014338-501"
+        }
+      }
+    ]
+  },
+  "smbv1": {
+    "ok": true,
+    "error": null,
+    "values": [
+      {
+        "FeatureName": "SMB1Protocol",
+        "State": 6
+      }
+    ]
+  }
+}

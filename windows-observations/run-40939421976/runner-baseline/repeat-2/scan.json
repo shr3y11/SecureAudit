@@ -1,0 +1,179 @@
+{
+  "scan_id": "9a081309-5987-46d9-991d-437f410b865d",
+  "started_at_utc": "2026-10-29T19:23:06.089594+00:00",
+  "completed_at_utc": "2026-10-29T19:23:10.675011+00:00",
+  "hostname": "runnervmdaln5",
+  "selected_count": 5,
+  "passed_count": 4,
+  "failed_count": 1,
+  "error_count": 0,
+  "assessed_count": 5,
+  "unassessed_count": 0,
+  "compliance_score": 80.0,
+  "coverage_percentage": 100.0,
+  "results": [
+    {
+      "check_id": "WIN-FW-001",
+      "check_name": "Windows Firewall Enabled",
+      "expected_value": "All applicable Windows Firewall profiles are enabled",
+      "observed_value": "Domain=True, Private=True, Public=True",
+      "status": "Pass",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:07.1431785Z",
+      "evidence": [
+        {
+          "profile": "Domain",
+          "enabled": true,
+          "found": true
+        },
+        {
+          "profile": "Private",
+          "enabled": true,
+          "found": true
+        },
+        {
+          "profile": "Public",
+          "enabled": true,
+          "found": true
+        }
+      ]
+    },
+    {
+      "check_id": "WIN-DEF-001",
+      "check_name": "Microsoft Defender Antivirus Active",
+      "expected_value": "Microsoft Defender Antivirus protection is enabled",
+      "observed_value": "AntivirusEnabled=True, AntispywareEnabled=True, RealTimeProtectionEnabled=False, BehaviorMonitorEnabled=False",
+      "status": "Pass",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:07.9713695Z",
+      "evidence": [
+        {
+          "setting": "AntivirusEnabled",
+          "enabled": true
+        },
+        {
+          "setting": "AntispywareEnabled",
+          "enabled": true
+        },
+        {
+          "setting": "RealTimeProtectionEnabled",
+          "enabled": false
+        },
+        {
+          "setting": "BehaviorMonitorEnabled",
+          "enabled": false
+        }
+      ]
+    },
+    {
+      "check_id": "WIN-BL-001",
+      "check_name": "BitLocker Protection Active",
+      "expected_value": "BitLocker protection is active on the operating-system drive",
+      "observed_value": "MountPoint=C:, VolumeStatus=FullyDecrypted, ProtectionStatus=Off, EncryptionPercentage=0, EncryptionMethod=None",
+      "status": "Fail",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:08.8693420Z",
+      "evidence": [
+        {
+          "mount_point": "C:",
+          "volume_type": "OperatingSystem",
+          "volume_status": "FullyDecrypted",
+          "protection_status": "Off",
+          "encryption_percentage": 0,
+          "encryption_method": "None",
+          "lock_status": "Unlocked",
+          "key_protector_types": []
+        }
+      ]
+    },
+    {
+      "check_id": "WIN-GUEST-001",
+      "check_name": "Guest Account Disabled",
+      "expected_value": "The built-in Guest account is disabled",
+      "observed_value": "AccountName=Guest, SID=S-1-5-21-3776380004-1005456608-3524014338-501, Enabled=False",
+      "status": "Pass",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:09.2798676Z",
+      "evidence": [
+        {
+          "account_name": "Guest",
+          "sid": "S-1-5-21-3776380004-1005456608-3524014338-501",
+          "enabled": false,
+          "principal_source": "Local",
+          "last_logon": null
+        }
+      ]
+    },
+    {
+      "check_id": "WIN-SMB1-001",
+      "check_name": "SMBv1 Disabled",
+      "expected_value": "SMBv1 is disabled",
+      "observed_value": "FeatureName=SMB1Protocol, State=DisabledWithPayloadRemoved, RestartNeeded=False",
+      "status": "Pass",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:10.6351893Z",
+      "evidence": [
+        {
+          "feature_name": "SMB1Protocol",
+          "feature_state": "DisabledWithPayloadRemoved",
+          "restart_needed": "False",
+          "custom_properties": [
+            "Microsoft.Dism.Commands.CustomProperty",
+            "Microsoft.Dism.Commands.CustomProperty",
+            "Microsoft.Dism.Commands.CustomProperty",
+            "Microsoft.Dism.Commands.CustomProperty",
+            "Microsoft.Dism.Commands.CustomProperty",
+            "Microsoft.Dism.Commands.CustomProperty"
+          ]
+        }
+      ]
+    }
+  ],
+  "evidence_context": {
+    "decision_version": "1.0.0",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9",
+    "baseline_ids": [
+      "WIN-FW-001",
+      "WIN-DEF-001",
+      "WIN-BL-001",
+      "WIN-GUEST-001",
+      "WIN-SMB1-001"
+    ],
+    "selected_ids": [
+      "WIN-FW-001",
+      "WIN-DEF-001",
+      "WIN-BL-001",
+      "WIN-GUEST-001",
+      "WIN-SMB1-001"
+    ],
+    "threshold_numerator": 4,
+    "threshold_denominator": 5
+  },
+  "evidence_summary": {
+    "decision_version": "1.0.0",
+    "states": {
+      "WIN-FW-001": "P",
+      "WIN-DEF-001": "P",
+      "WIN-BL-001": "F",
+      "WIN-GUEST-001": "P",
+      "WIN-SMB1-001": "P"
+    },
+    "baseline_count": 5,
+    "selected_count": 5,
+    "passed_count": 4,
+    "failed_count": 1,
+    "error_count": 0,
+    "omitted_count": 0,
+    "missing_selected_records": [],
+    "assessed_pass_rate": 80.0,
+    "selected_coverage": 100.0,
+    "baseline_coverage": 100.0,
+    "lower_bound": 80.0,
+    "upper_bound": 80.0,
+    "threshold_percentage": 80.0,
+    "decision": "ABOVE",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9"
+  }
+}

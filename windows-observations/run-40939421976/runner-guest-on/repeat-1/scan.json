@@ -1,0 +1,77 @@
+{
+  "scan_id": "6ab95d9f-e63f-470d-917a-b6fa9fdffc9e",
+  "started_at_utc": "2026-10-29T19:23:46.936315+00:00",
+  "completed_at_utc": "2026-10-29T19:23:47.454429+00:00",
+  "hostname": "runnervmdaln5",
+  "selected_count": 1,
+  "passed_count": 0,
+  "failed_count": 1,
+  "error_count": 0,
+  "assessed_count": 1,
+  "unassessed_count": 0,
+  "compliance_score": 0.0,
+  "coverage_percentage": 100.0,
+  "results": [
+    {
+      "check_id": "WIN-GUEST-001",
+      "check_name": "Guest Account Disabled",
+      "expected_value": "The built-in Guest account is disabled",
+      "observed_value": "AccountName=Guest, SID=S-1-5-21-3776380004-1005456608-3524014338-501, Enabled=True",
+      "status": "Fail",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:47.3278721Z",
+      "evidence": [
+        {
+          "account_name": "Guest",
+          "sid": "S-1-5-21-3776380004-1005456608-3524014338-501",
+          "enabled": true,
+          "principal_source": "Local",
+          "last_logon": null
+        }
+      ]
+    }
+  ],
+  "evidence_context": {
+    "decision_version": "1.0.0",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9",
+    "baseline_ids": [
+      "WIN-FW-001",
+      "WIN-DEF-001",
+      "WIN-BL-001",
+      "WIN-GUEST-001",
+      "WIN-SMB1-001"
+    ],
+    "selected_ids": [
+      "WIN-GUEST-001"
+    ],
+    "threshold_numerator": 4,
+    "threshold_denominator": 5
+  },
+  "evidence_summary": {
+    "decision_version": "1.0.0",
+    "states": {
+      "WIN-FW-001": "O",
+      "WIN-DEF-001": "O",
+      "WIN-BL-001": "O",
+      "WIN-GUEST-001": "F",
+      "WIN-SMB1-001": "O"
+    },
+    "baseline_count": 5,
+    "selected_count": 1,
+    "passed_count": 0,
+    "failed_count": 1,
+    "error_count": 0,
+    "omitted_count": 4,
+    "missing_selected_records": [],
+    "assessed_pass_rate": 0.0,
+    "selected_coverage": 100.0,
+    "baseline_coverage": 20.0,
+    "lower_bound": 0.0,
+    "upper_bound": 80.0,
+    "threshold_percentage": 80.0,
+    "decision": "UNRESOLVED",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "scan_id": "f763c1cf-75be-4ac8-8494-84a6b084d3a6",
+  "started_at_utc": "2026-10-29T19:23:37.445289+00:00",
+  "completed_at_utc": "2026-10-29T19:23:38.529270+00:00",
+  "hostname": "runnervmdaln5",
+  "selected_count": 1,
+  "passed_count": 0,
+  "failed_count": 1,
+  "error_count": 0,
+  "assessed_count": 1,
+  "unassessed_count": 0,
+  "compliance_score": 0.0,
+  "coverage_percentage": 100.0,
+  "results": [
+    {
+      "check_id": "WIN-FW-001",
+      "check_name": "Windows Firewall Enabled",
+      "expected_value": "All applicable Windows Firewall profiles are enabled",
+      "observed_value": "Domain=False, Private=True, Public=True",
+      "status": "Fail",
+      "error_message": null,
+      "timestamp_utc": "2026-10-29T19:23:38.4886009Z",
+      "evidence": [
+        {
+          "profile": "Domain",
+          "enabled": false,
+          "found": true
+        },
+        {
+          "profile": "Private",
+          "enabled": true,
+          "found": true
+        },
+        {
+          "profile": "Public",
+          "enabled": true,
+          "found": true
+        }
+      ]
+    }
+  ],
+  "evidence_context": {
+    "decision_version": "1.0.0",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9",
+    "baseline_ids": [
+      "WIN-FW-001",
+      "WIN-DEF-001",
+      "WIN-BL-001",
+      "WIN-GUEST-001",
+      "WIN-SMB1-001"
+    ],
+    "selected_ids": [
+      "WIN-FW-001"
+    ],
+    "threshold_numerator": 4,
+    "threshold_denominator": 5
+  },
+  "evidence_summary": {
+    "decision_version": "1.0.0",
+    "states": {
+      "WIN-FW-001": "F",
+      "WIN-DEF-001": "O",
+      "WIN-BL-001": "O",
+      "WIN-GUEST-001": "O",
+      "WIN-SMB1-001": "O"
+    },
+    "baseline_count": 5,
+    "selected_count": 1,
+    "passed_count": 0,
+    "failed_count": 1,
+    "error_count": 0,
+    "omitted_count": 4,
+    "missing_selected_records": [],
+    "assessed_pass_rate": 0.0,
+    "selected_coverage": 100.0,
+    "baseline_coverage": 20.0,
+    "lower_bound": 0.0,
+    "upper_bound": 80.0,
+    "threshold_percentage": 80.0,
+    "decision": "UNRESOLVED",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9"
+  }
+}

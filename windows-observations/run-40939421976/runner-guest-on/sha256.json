@@ -1,0 +1,9 @@
+{
+  "case.json": "d3757d29e0596c971a2ce2717e10ac32d525a1f685e3b06c1de072ca441c20e2",
+  "manual-review.csv": "6cfa3b13ae9f262673aa4adb9d00fc61f784f1f568ddf7e77838918c2fb688c2",
+  "repeat-1\\reference-after.json": "bea8da6a4137b331b5c155f98fc506c9ea15c2f176a3e50533a69578d52b2afc",
+  "repeat-1\\reference-before.json": "8e9778e6b5be8250398837364a7b8854a03bad1bb17ac88e1d714afe155f4d87",
+  "repeat-1\\scan.json": "dc99a24c90f7e9b137c808be77b16c4b3ac4c1aafff4080fec2eab8f93e9b518",
+  "repeat-1\\secureaudit-6ab95d9f-e63f-470d-917a-b6fa9fdffc9e.html": "b9d89f68e1dfce86d45be1ba6a36b3ee2d94f974293da8968aac57f16f016eba",
+  "scans.db": "70e50cf96f66a644dc4992ce7f0c5f4fa9f5994ad19cdec34bb943ba7e734663"
+}

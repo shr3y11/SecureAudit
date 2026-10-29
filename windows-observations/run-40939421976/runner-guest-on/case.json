@@ -1,0 +1,24 @@
+{
+  "case_id": "runner-guest-on",
+  "snapshot_id": "gha-run-40939421976",
+  "python": "3.12.10",
+  "platform": "Windows-2025Server-10.0.26100-SP0",
+  "catalog_context": {
+    "decision_version": "1.0.0",
+    "baseline_version": "1.0.0",
+    "catalog_sha256": "b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9",
+    "baseline_ids": [
+      "WIN-FW-001",
+      "WIN-DEF-001",
+      "WIN-BL-001",
+      "WIN-GUEST-001",
+      "WIN-SMB1-001"
+    ],
+    "selected_ids": [
+      "WIN-GUEST-001"
+    ],
+    "threshold_numerator": 4,
+    "threshold_denominator": 5
+  },
+  "review_status": "PENDING_INDEPENDENT_REVIEW"
+}

@@ -1,0 +1,13 @@
+﻿{
+    "environment":  "GitHub-hosted windows-latest runner (Microsoft-hosted image; NOT the project lab VM)",
+    "windows_product":  "Windows Server 2025 Datacenter",
+    "windows_version":  "2009",
+    "os_build":  "26100",
+    "os_architecture":  "64-bit",
+    "powershell":  "5.1.26100.33648",
+    "python":  "Python 3.12.10",
+    "repository_commit":  "28233bea057c7f354db18f9663f57983a963b9af",
+    "workflow_run_id":  "40939421976",
+    "operator":  "GitHub Actions workflow (operator steps prepare/restore configurations)",
+    "started_utc":  "2026-10-29T19:22:44.5692334Z"
+}

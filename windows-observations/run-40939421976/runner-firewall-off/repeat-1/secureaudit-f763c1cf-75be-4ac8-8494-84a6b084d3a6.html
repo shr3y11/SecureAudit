@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>SecureAudit Report - runnervmdaln5</title>
+
+    <style>
+        :root {
+            color-scheme: light;
+            font-family:
+                Inter,
+                "Segoe UI",
+                Arial,
+                sans-serif;
+            background: #f4f6f8;
+            color: #17212b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #f4f6f8;
+            color: #17212b;
+        }
+
+        .page {
+            width: min(1120px, calc(100% - 32px));
+            margin: 32px auto;
+        }
+
+        .report-header {
+            padding: 28px;
+            border-radius: 14px;
+            background: #17212b;
+            color: #ffffff;
+        }
+
+        .report-header h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+        }
+
+        .report-header p {
+            margin: 4px 0;
+            color: #d8e0e7;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+            margin: 20px 0;
+        }
+
+        .summary-card {
+            padding: 18px;
+            border: 1px solid #dde3e8;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 3px 10px rgba(23, 33, 43, 0.05);
+        }
+
+        .summary-card .label {
+            margin-bottom: 8px;
+            color: #53606d;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .summary-card .value {
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .section-heading {
+            margin: 30px 0 14px;
+        }
+
+        .result-card {
+            margin-bottom: 16px;
+            padding: 20px;
+            border: 1px solid #dde3e8;
+            border-radius: 12px;
+            background: #ffffff;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .result-header h3 {
+            margin: 0;
+            font-size: 19px;
+        }
+
+        .check-id {
+            margin: 5px 0 0;
+            color: #687684;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            min-width: 70px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .status-pass {
+            background: #dff5e7;
+            color: #176536;
+        }
+
+        .status-fail {
+            background: #fde5e5;
+            color: #9f2424;
+        }
+
+        .status-error {
+            background: #fff0d5;
+            color: #8a5200;
+        }
+
+        .result-details {
+            display: grid;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .result-details div {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 16px;
+        }
+
+        dt {
+            color: #53606d;
+            font-weight: 600;
+        }
+
+        dd {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .error-message {
+            margin: 14px 0;
+            padding: 12px;
+            border-left: 4px solid #d98200;
+            background: #fff7e8;
+            overflow-wrap: anywhere;
+        }
+
+        details {
+            margin-top: 16px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        pre {
+            max-height: 420px;
+            padding: 16px;
+            overflow: auto;
+            border-radius: 8px;
+            background: #101820;
+            color: #e8eef3;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .empty-state {
+            padding: 28px;
+            border: 1px dashed #adb8c2;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #53606d;
+            text-align: center;
+        }
+
+        .disclaimer {
+            margin-top: 28px;
+            padding: 16px;
+            border-radius: 10px;
+            background: #eaf0f5;
+            color: #44515e;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .footer {
+            margin: 24px 0;
+            color: #687684;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        @media (max-width: 640px) {
+            .page {
+                width: min(100% - 20px, 1120px);
+                margin: 10px auto;
+            }
+
+            .report-header {
+                padding: 20px;
+            }
+
+            .result-header {
+                flex-direction: column;
+            }
+
+            .result-details div {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+        }
+
+        @media print {
+            body {
+                background: #ffffff;
+            }
+
+            .page {
+                width: 100%;
+                margin: 0;
+            }
+
+            .result-card,
+            .summary-card {
+                break-inside: avoid;
+                box-shadow: none;
+            }
+
+            details {
+                display: block;
+            }
+
+            details > summary {
+                display: none;
+            }
+
+            details > pre {
+                display: block;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <header class="report-header">
+            <h1>SecureAudit Compliance Report</h1>
+            <p>
+                Host:
+                <strong>runnervmdaln5</strong>
+            </p>
+            <p>
+                Scan ID:
+                <strong>f763c1cf-75be-4ac8-8494-84a6b084d3a6</strong>
+            </p>
+            <p>
+                Started:
+                2026-10-29T19:23:37.445289+00:00
+            </p>
+            <p>
+                Completed:
+                2026-10-29T19:23:38.529270+00:00
+            </p>
+        </header>
+
+        <section
+            class="summary-grid"
+            aria-label="Assessment summary"
+        >
+            <div class="summary-card">
+                <div class="label">Compliance score</div>
+                <div class="value">0.00%</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="label">Assessment coverage</div>
+                <div class="value">
+                    100.00%
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="label">Selected</div>
+                <div class="value">
+                    1
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="label">Passed</div>
+                <div class="value">
+                    0
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="label">Failed</div>
+                <div class="value">
+                    1
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <div class="label">Errors</div>
+                <div class="value">
+                    0
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="disclaimer" aria-label="Baseline evidence completeness">
+            <h2>Baseline evidence completeness</h2>
+            <p>Baseline coverage: 20.00%
+            (5 required checks).</p>
+            <p>Possible complete-baseline pass fraction:
+            0.00% to 80.00%.</p>
+            <p>Aggregate threshold: 80.00%.
+            Decision: <strong>UNRESOLVED</strong>.</p>
+            <p>Omitted required checks: WIN-DEF-001, WIN-BL-001, WIN-GUEST-001, WIN-SMB1-001.</p>
+            <p>Baseline version: 1.0.0.
+            Decision version: 1.0.0.
+            Catalog SHA-256: b0ea08d97939c7dec6a7c3b26d894a567096b5e205118e0707288556275521f9.</p>
+            <p>ABOVE means every permitted completion meets the aggregate threshold.
+            BELOW means every completion falls below it. UNRESOLVED means missing
+            evidence could change that conclusion. Bounds assume correct Pass/Fail
+            readings. Mandatory controls require separate review.</p>
+        </section>
+        
+        
+        
+        <section aria-label="Plain language summary">
+            <h2 class="section-heading">What this means, in plain language</h2>
+            <p>These checks did not pass. Each one says what happened, why it
+            matters, and how to fix it. The full technical evidence follows below.</p>
+            
+        <article class="result-card">
+            <h3>Windows Firewall Enabled</h3>
+            <p><strong>What happened:</strong> Expected: All applicable Windows Firewall profiles are enabled. Found: Domain=False, Private=True, Public=True.</p>
+            <p><strong>Why it matters:</strong> Checks whether all applicable Windows Firewall profiles are enabled.</p>
+            <p><strong>How to fix it:</strong> Enable the Domain, Private, and Public Windows Firewall profiles through Windows Security, Group Policy, or an approved administrative configuration method.</p>
+            <p><strong>Severity:</strong> High</p>
+        </article>
+        
+        </section>
+        
+
+        <h2 class="section-heading">Technical assessment results</h2>
+
+        <section aria-label="Technical assessment results">
+            
+    <article class="result-card">
+        <div class="result-header">
+            <div>
+                <h3>Windows Firewall Enabled</h3>
+                <p class="check-id">WIN-FW-001</p>
+            </div>
+            <span class="status-badge status-fail">
+                Fail
+            </span>
+        </div>
+
+        <dl class="result-details">
+            <div>
+                <dt>Expected value</dt>
+                <dd>All applicable Windows Firewall profiles are enabled</dd>
+            </div>
+            <div>
+                <dt>Observed value</dt>
+                <dd>Domain=False, Private=True, Public=True</dd>
+            </div>
+            <div>
+                <dt>Assessment timestamp</dt>
+                <dd>2026-10-29T19:23:38.4886009Z</dd>
+            </div>
+        </dl>
+
+        
+
+        <details>
+            <summary>View technical evidence</summary>
+            <pre>[
+  {
+    &quot;profile&quot;: &quot;Domain&quot;,
+    &quot;enabled&quot;: false,
+    &quot;found&quot;: true
+  },
+  {
+    &quot;profile&quot;: &quot;Private&quot;,
+    &quot;enabled&quot;: true,
+    &quot;found&quot;: true
+  },
+  {
+    &quot;profile&quot;: &quot;Public&quot;,
+    &quot;enabled&quot;: true,
+    &quot;found&quot;: true
+  }
+]</pre>
+        </details>
+    </article>
+    
+        </section>
+
+        <aside class="disclaimer">
+            <strong>Assessment limitation:</strong>
+            This report represents a point-in-time technical assessment of
+            the selected local Windows controls. It is not a certification,
+            audit opinion, or guarantee of complete regulatory compliance.
+            Results marked Error were not successfully assessed and are
+            excluded from the compliance-score denominator.
+        </aside>
+
+        <footer class="footer">
+            Generated locally by SecureAudit.
+        </footer>
+    </main>
+</body>
+</html>
