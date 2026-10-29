@@ -26,6 +26,10 @@ from core.scoring import calculate_score
 from .scanner_bridge import collect_local_evidence
 
 ASSETS = Path(__file__).parent / "static"
+# Bound on unfinished work. A single request can already queue at most
+# 500 jobs (JobInput), but without a total cap, repeated requests could
+# grow the queue without limit. 429 once this many jobs are pending.
+MAX_PENDING_JOBS = 1000
 # Demo check IDs and severities mirror checks/catalog.json exactly.
 # The demo generates synthetic evidence for these real catalog checks;
 # it must never invent IDs (e.g. WIN-AV-001, WIN-UPDATE-001) that have
@@ -298,6 +302,9 @@ def create_app(database_url, api_token, *, worker_enabled=True):
             raise HTTPException(404, "One or more endpoints do not exist")
         if any(not e.simulated for e in endpoints):
             raise HTTPException(409, "Demo jobs can run only on simulated endpoints; real agent execution is not connected")
+        pending = session.scalar(select(func.count()).select_from(Job).where(Job.status.in_(["queued", "running"]))) or 0
+        if pending + len(endpoints) > MAX_PENDING_JOBS:
+            raise HTTPException(429, f"Too many pending jobs ({pending}/{MAX_PENDING_JOBS}); wait for the queue to drain")
         due = (datetime.now(timezone.utc) + timedelta(seconds=payload.delay_seconds)).isoformat()
         jobs = []
         for endpoint in endpoints:

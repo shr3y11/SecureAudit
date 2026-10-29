@@ -205,6 +205,23 @@ def test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue(cl
     assert client.get("/api/jobs").json()[0]["kind"] == "local"
 
 
+def test_demo_job_queue_has_a_pending_cap(client):
+    """Repeated queue requests must not grow unfinished work without limit."""
+    from secureaudit_central.api import MAX_PENDING_JOBS
+
+    assert client.post("/api/demo/seed", json={"count": 500}).status_code == 200
+    ids = [e["id"] for e in client.get("/api/endpoints").json()]
+    assert len(ids) == 500
+    # Fill the queue exactly to the cap (worker is disabled in this fixture).
+    assert client.post("/api/demo/jobs", json={"endpoint_ids": ids}).status_code == 201
+    assert client.post("/api/demo/jobs", json={"endpoint_ids": ids}).status_code == 201
+    assert MAX_PENDING_JOBS == 1000
+    # One more job would exceed the cap and is refused, not queued.
+    response = client.post("/api/demo/jobs", json={"endpoint_ids": ids[:1]})
+    assert response.status_code == 429
+    assert len(client.get("/api/jobs").json()) == 1000
+
+
 def test_export_pagination_bounds_and_walks_assessments(client, endpoint):
     for index in range(3):
         body = payload()
