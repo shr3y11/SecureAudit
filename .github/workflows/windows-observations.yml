@@ -1,0 +1,144 @@
+name: Windows observations
+
+# Genuine Windows captures for the research validation protocol
+# (docs/RESEARCH_VALIDATION.md), executed on a GitHub-hosted Windows
+# runner by operator steps in this workflow. The capture tool itself
+# (tools/validate_windows.py) changes no settings; configuration
+# changes for the failure cases are prepared and restored by the
+# operator steps below, each recording whether it actually took
+# effect. Cases that cannot be created on a hosted runner are
+# reported as not executed, with the reason — never simulated.
+#
+# Provenance limit, stated plainly: this is a Microsoft-hosted runner
+# image, not the project's lab VM. Readings are genuine for this
+# machine; a lab-VM replication remains separate future work.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-dev.txt
+
+      - name: Lab record
+        shell: powershell
+        run: |
+          $out = "captures"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          $info = Get-ComputerInfo -Property WindowsProductName, WindowsVersion, OsBuildNumber, OsArchitecture
+          $record = [ordered]@{
+            environment = "GitHub-hosted windows-latest runner (Microsoft-hosted image; NOT the project lab VM)"
+            windows_product = $info.WindowsProductName
+            windows_version = $info.WindowsVersion
+            os_build = $info.OsBuildNumber
+            os_architecture = $info.OsArchitecture
+            powershell = $PSVersionTable.PSVersion.ToString()
+            python = (python --version)
+            repository_commit = $env:GITHUB_SHA
+            workflow_run_id = $env:GITHUB_RUN_ID
+            operator = "GitHub Actions workflow (operator steps prepare/restore configurations)"
+            started_utc = (Get-Date).ToUniversalTime().ToString("o")
+          }
+          $record | ConvertTo-Json | Set-Content "$out/lab-record.json" -Encoding utf8
+
+      - name: Capture — baseline (administrator, 3 repeats)
+        shell: powershell
+        continue-on-error: true
+        run: |
+          python tools/validate_windows.py --case-id runner-baseline --snapshot-id "gha-run-$env:GITHUB_RUN_ID" --output captures/runner-baseline --repeat 3 *>&1 | Tee-Object captures/runner-baseline.log
+
+      - name: Capture — selective scan (firewall only)
+        shell: powershell
+        continue-on-error: true
+        run: |
+          python tools/validate_windows.py --case-id runner-selective --snapshot-id "gha-run-$env:GITHUB_RUN_ID" --output captures/runner-selective --select WIN-FW-001 --repeat 1 *>&1 | Tee-Object captures/runner-selective.log
+
+      - name: Prepare — firewall failure case (disable Domain profile)
+        id: prep_fw
+        shell: powershell
+        continue-on-error: true
+        run: |
+          Set-NetFirewallProfile -Profile Domain -Enabled False -ErrorAction Stop
+          $state = (Get-NetFirewallProfile -Profile Domain).Enabled.ToString()
+          "Domain profile Enabled=$state after preparation" | Tee-Object captures/firewall-prep.txt
+
+      - name: Capture — firewall failure case
+        if: steps.prep_fw.outcome == 'success'
+        shell: powershell
+        continue-on-error: true
+        run: |
+          python tools/validate_windows.py --case-id runner-firewall-off --snapshot-id "gha-run-$env:GITHUB_RUN_ID" --output captures/runner-firewall-off --select WIN-FW-001 --repeat 1 *>&1 | Tee-Object captures/runner-firewall-off.log
+
+      - name: Restore — firewall profiles
+        if: always()
+        shell: powershell
+        run: Set-NetFirewallProfile -Profile Domain -Enabled True
+
+      - name: Prepare — guest failure case (enable built-in Guest)
+        id: prep_guest
+        shell: powershell
+        continue-on-error: true
+        run: |
+          Enable-LocalUser -Name "Guest" -ErrorAction Stop
+          $state = (Get-LocalUser -Name "Guest").Enabled.ToString()
+          "Guest Enabled=$state after preparation" | Tee-Object captures/guest-prep.txt
+
+      - name: Capture — guest failure case
+        if: steps.prep_guest.outcome == 'success'
+        shell: powershell
+        continue-on-error: true
+        run: |
+          python tools/validate_windows.py --case-id runner-guest-on --snapshot-id "gha-run-$env:GITHUB_RUN_ID" --output captures/runner-guest-on --select WIN-GUEST-001 --repeat 1 *>&1 | Tee-Object captures/runner-guest-on.log
+
+      - name: Restore — disable Guest
+        if: always()
+        shell: powershell
+        run: Disable-LocalUser -Name "Guest"
+
+      - name: Attempt — Defender failure case (may be blocked by Tamper Protection)
+        shell: powershell
+        continue-on-error: true
+        run: |
+          try {
+            Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction Stop
+            $rt = (Get-MpComputerStatus).RealTimeProtectionEnabled
+            "RealTimeProtectionEnabled=$rt after preparation attempt" | Tee-Object captures/defender-prep.txt
+            if ($rt -eq $false) {
+              python tools/validate_windows.py --case-id runner-defender-off --snapshot-id "gha-run-$env:GITHUB_RUN_ID" --output captures/runner-defender-off --select WIN-DEF-001 --repeat 1 *>&1 | Tee-Object captures/runner-defender-off.log
+              Set-MpPreference -DisableRealtimeMonitoring $false
+            } else {
+              "CASE NOT EXECUTED: real-time protection stayed enabled (Tamper Protection or policy)." | Add-Content captures/defender-prep.txt
+            }
+          } catch {
+            "CASE NOT EXECUTED: $($_.Exception.Message)" | Tee-Object captures/defender-prep.txt
+          }
+
+      - name: Publish captures to data branch
+        if: always()
+        shell: powershell
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git fetch origin data/windows-observations 2>$null
+          if ($LASTEXITCODE -eq 0) { git checkout data/windows-observations } else { git checkout -B data/windows-observations }
+          $dest = "windows-observations/run-$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item -Recurse -Force captures/* $dest
+          git add windows-observations
+          git commit -m "data: genuine Windows observations from hosted runner (run $env:GITHUB_RUN_ID)"
+          git push origin data/windows-observations
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-observations
+          path: captures
