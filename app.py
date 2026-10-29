@@ -27,6 +27,22 @@ from core.scoring import calculate_score
 from core.evidence import make_context
 
 
+def format_baseline_decision(scan: Any) -> str:
+    """Format the fixed-baseline decision of a stored scan for display.
+
+    Scans saved before the evidence extension (or without a context)
+    honestly show "Not available" — no baseline is invented for them.
+    """
+
+    summary = scan.get("evidence_summary") if isinstance(scan, dict) else None
+    if not summary:
+        return "Not available"
+    return (
+        f"{summary['decision']} "
+        f"({summary['lower_bound']:.2f}–{summary['upper_bound']:.2f}%)"
+    )
+
+
 class ScanWorkflowError(RuntimeError):
     """Raised when the complete local scan workflow cannot be completed."""
 
@@ -161,6 +177,7 @@ class SecureAuditApp:
         self.error_value = tk.StringVar(value="0")
         self.score_value = tk.StringVar(value="—")
         self.coverage_value = tk.StringVar(value="—")
+        self.baseline_value = tk.StringVar(value="—")
         self.scan_status = tk.StringVar(value="Ready")
 
         self.last_report_path: Path | None = None
@@ -408,6 +425,7 @@ class SecureAuditApp:
             ("Errors", self.error_value),
             ("Compliance Score", self.score_value),
             ("Assessment Coverage", self.coverage_value),
+            ("Baseline Decision", self.baseline_value),
         ]
 
         for column, (label_text, value_variable) in enumerate(
@@ -720,6 +738,10 @@ class SecureAuditApp:
             f"{scan['coverage_percentage']:.2f}%"
         )
 
+        self.baseline_value.set(
+            format_baseline_decision(scan)
+        )
+
         for result in scan["results"]:
             self.results_table.insert(
                 "",
@@ -919,6 +941,7 @@ class SecureAuditApp:
             "errors",
             "score",
             "coverage",
+            "decision",
         )
 
         history_table = ttk.Treeview(
@@ -937,6 +960,7 @@ class SecureAuditApp:
             "errors": "Errors",
             "score": "Score",
             "coverage": "Coverage",
+            "decision": "Baseline Decision",
         }
 
         for column, heading_text in headings.items():
@@ -981,6 +1005,11 @@ class SecureAuditApp:
         history_table.column(
             "coverage",
             width=90,
+            anchor=tk.CENTER,
+        )
+        history_table.column(
+            "decision",
+            width=190,
             anchor=tk.CENTER,
         )
 
@@ -1030,6 +1059,7 @@ class SecureAuditApp:
                     scan["error_count"],
                     score_text,
                     coverage_text,
+                    format_baseline_decision(scan),
                 ),
             )
 
