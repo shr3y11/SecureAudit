@@ -21,8 +21,8 @@ evidence with hashes that are actually *recomputed* by a verification
 endpoint, and evaluates — under an explicit attacker model — which
 tamperings that detects and which it cannot; and (3) is evaluated
 end-to-end: an exhaustive finite-state study of the scoring rule, a
-seven-experiment tamper laboratory, and [⏳ genuine Windows
-observations]. In the state-space study, a naive selected-checks score
+seven-experiment tamper laboratory, and genuine Windows observations
+on a Server 2025 host under a pre-registered capture protocol. In the state-space study, a naive selected-checks score
 overstates the complete-baseline pass fraction by up to **80 percentage
 points**; the interval decision never does. In the tamper laboratory,
 internal hash verification detects naive modification but is defeated
@@ -84,13 +84,30 @@ detects, quantifying exactly where the integrity boundary lies.
   reference the attacker cannot reach. This motivates the protected
   checkpoint as future work (§7), stated as a requirement, not a claim.
 
-## 5. Windows observations ⏳
-- Protocol exists (`docs/RESEARCH_VALIDATION.md`,
-  `tools/validate_windows.py`, `tools/collect_reference.ps1`):
-  baseline VM, per-check Pass and Fail configurations.
-- [PENDING: captures from a genuine Windows VM. This section is
-  written only from those captures; until they exist the paper's
-  empirical claim is limited to §3–§4, and the text must say so.]
+## 5. Windows observations ✅ (hosted-runner execution; lab-VM replication ⏳)
+- Executed 2026-10-29 on a genuine Windows machine — **Windows
+  Server 2025 Datacenter (build 26100)**, a GitHub-hosted runner —
+  under the protocol in `docs/RESEARCH_VALIDATION.md`. Raw captures
+  are committed on the `data/windows-observations` branch; summary in
+  `research/windows_observations/README.md`.
+- Baseline (administrator, 3 repeats, identical): FW Pass, Defender
+  Pass, BitLocker Fail (volume fully decrypted), Guest Pass, SMB1
+  Pass — every reading agrees with the independently captured native
+  reference. Decision ABOVE, bounds [80, 80] at full coverage.
+- Configured cases behave as specified: firewall profile disabled →
+  WIN-FW-001 Fail; Guest enabled → WIN-GUEST-001 Fail; selective
+  one-check scan → 20% baseline coverage, UNRESOLVED, bounds
+  [20, 100] — the protocol's prediction, observed.
+- Finding: disabling Defender real-time monitoring does not change
+  WIN-DEF-001, whose objective is the narrower `AntivirusEnabled`
+  (true throughout, per the same capture's reference). The strict
+  `AntivirusEnabled = false` case was not achievable on this runner
+  and is reported not executed, as are the unelevated-user,
+  BitLocker-on, and SMB1-on cases — with reasons, never simulated.
+- Limits, stated in the paper: a hosted runner is not the lab VM;
+  Windows 11 and snapshot-based replication remain future work, and
+  the protocol's independent manual review of these captures is
+  still pending.
 
 ## 6. Threats to validity ✍️ (all already documented in-repo)
 - Central's fleet score still uses the legacy point score; bounds are
