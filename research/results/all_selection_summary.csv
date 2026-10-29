@@ -1,0 +1,4 @@
+ABOVE,BELOW,UNRESOLVED,catalog_gate_positive,rate_negative,rate_positive,rate_undefined,selected_gate_positive,selected_gate_unsupported,stable_positive_with_incomplete_catalog,states,threshold_percent,unsupported_negative,unsupported_positive
+106,106,811,16,606,386,31,96,45,90,1023,60,500,280
+16,376,631,6,776,216,31,36,25,10,1023,80,400,200
+1,781,241,1,781,211,31,31,30,0,1023,100,0,210

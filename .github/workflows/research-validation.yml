@@ -1,0 +1,40 @@
+name: Research reporting validation
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Dev requirements, not pytest alone: since the M5 integration this
+      # branch also contains the Central tests, which need FastAPI,
+      # SQLAlchemy and httpx at collection time.
+      - run: python -m pip install -r requirements-dev.txt
+      - if: runner.os == 'Windows'
+        run: python -m pytest -q
+      # Two Central tests exercise the Windows-only local-scan path and
+      # cannot pass on Linux; they are named explicitly, not skipped
+      # silently. They run in the Windows job above.
+      - if: runner.os != 'Windows'
+        run: >-
+          python -m pytest -q
+          --deselect tests/test_central.py::test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue
+          --deselect tests/test_central.py::test_failed_scanner_creates_failed_job_not_false_evidence
+      - run: python research/run_study.py
+      - if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path tools/collect_reference.ps1), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count) { throw ($errors | Out-String) }
