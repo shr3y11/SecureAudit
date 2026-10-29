@@ -282,6 +282,65 @@ def create_app(database_url, api_token, *, worker_enabled=True):
         return [assessment_dict(a, True) for a in session.scalars(select(Assessment).where(
             Assessment.endpoint_id == endpoint_id).order_by(Assessment.collected_at.desc(), Assessment.received_at.desc()).limit(100))]
 
+    @app.get("/api/endpoints/{endpoint_id}/bundle", dependencies=protected)
+    def evidence_bundle(endpoint_id: str, session: Session = Depends(db)):
+        """Download one endpoint's evidence as a self-verifying ZIP bundle.
+
+        The bundle lets a reviewer verify the export without the app:
+        manifest.json carries the SHA-256 of every other file, and the
+        approved check catalog is included byte-for-byte. The hashes
+        detect any change made after export; they do not by themselves
+        prove who created the bundle.
+        """
+        import zipfile
+
+        from core.paths import catalog_path
+
+        endpoint = session.get(Endpoint, endpoint_id)
+        if endpoint is None:
+            raise HTTPException(404, "Endpoint not found")
+        rows = [r for r in endpoint_rows(session) if r["id"] == endpoint.id]
+        assessments = [assessment_dict(a, True) for a in session.scalars(select(Assessment).where(
+            Assessment.endpoint_id == endpoint_id).order_by(Assessment.collected_at.desc(), Assessment.received_at.desc()))]
+
+        files: dict[str, bytes] = {}
+        files["endpoint.json"] = json.dumps(rows[0] if rows else {"id": endpoint.id},
+                                             indent=2, sort_keys=True, default=str).encode("utf-8")
+        files["assessments.json"] = json.dumps(assessments, indent=2, sort_keys=True, default=str).encode("utf-8")
+        catalog_version = None
+        try:
+            catalog_bytes = catalog_path().read_bytes()
+            files["catalog.json"] = catalog_bytes
+            catalog_version = json.loads(catalog_bytes).get("catalog_version")
+        except (OSError, ValueError):
+            files["catalog.json"] = b""
+        files["README.txt"] = (
+            "SecureAudit evidence bundle\n"
+            "===========================\n\n"
+            "Verify this bundle without SecureAudit:\n"
+            "1. Unzip it.\n"
+            "2. Compute the SHA-256 of endpoint.json, assessments.json and catalog.json\n"
+            "   (for example: sha256sum endpoint.json assessments.json catalog.json).\n"
+            "3. Compare each value with manifest.json. Any mismatch means the file\n"
+            "   changed after this bundle was exported.\n\n"
+            "Each assessment in assessments.json also carries the SHA-256 that was\n"
+            "recorded when its evidence was received. The hashes detect changes;\n"
+            "they do not by themselves prove who created the bundle.\n"
+        ).encode("utf-8")
+        manifest = {"product": "SecureAudit Central", "version": __version__,
+                    "generated_at": now(), "endpoint_id": endpoint.id,
+                    "hostname": endpoint.hostname, "catalog_version": catalog_version,
+                    "files": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())}}
+        files["manifest.json"] = json.dumps(manifest, indent=2, sort_keys=True).encode("utf-8")
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for name in ("manifest.json", "README.txt", "endpoint.json", "assessments.json", "catalog.json"):
+                archive.writestr(name, files[name])
+        safe_host = "".join(c if c.isalnum() or c in "._-" else "_" for c in endpoint.hostname)
+        return Response(buffer.getvalue(), media_type="application/zip", headers={
+            "Content-Disposition": f'attachment; filename="SecureAudit-bundle-{safe_host}.zip"'})
+
     @app.post("/api/demo/seed", dependencies=protected)
     def seed(payload: DemoSeed, session: Session = Depends(db)):
         created = 0

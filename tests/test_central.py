@@ -205,6 +205,31 @@ def test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue(cl
     assert client.get("/api/jobs").json()[0]["kind"] == "local"
 
 
+def test_evidence_bundle_is_self_verifying(client, endpoint):
+    """A reviewer must be able to verify the bundle without the app."""
+    import hashlib
+    import io
+    import zipfile
+
+    assert client.post(f"/api/endpoints/{endpoint}/evidence", json=payload()).status_code == 200
+    response = client.get(f"/api/endpoints/{endpoint}/bundle")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = set(archive.namelist())
+        assert {"manifest.json", "README.txt", "endpoint.json", "assessments.json", "catalog.json"} <= names
+        manifest = json.loads(archive.read("manifest.json"))
+        for name, digest in manifest["files"].items():
+            assert hashlib.sha256(archive.read(name)).hexdigest() == digest, name
+        assessments = json.loads(archive.read("assessments.json"))
+        assert assessments[0]["submission_id"] == "submission-001"
+        assert assessments[0]["sha256"], "the recorded evidence hash travels with the bundle"
+        catalog = json.loads(archive.read("catalog.json"))
+        assert manifest["catalog_version"] == catalog["catalog_version"]
+
+    assert client.get("/api/endpoints/does-not-exist/bundle").status_code == 404
+
 def test_demo_job_queue_has_a_pending_cap(client):
     """Repeated queue requests must not grow unfinished work without limit."""
     from secureaudit_central.api import MAX_PENDING_JOBS
