@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from core.paths import database_path as default_database_path
+from core.evidence import assess_context
 
 
 DEFAULT_DATABASE_PATH: Final[Path] = default_database_path()
@@ -140,6 +141,11 @@ def initialize_database(
 
     CREATE INDEX IF NOT EXISTS idx_scan_results_scan_id
         ON scan_results(scan_id);
+
+    CREATE TABLE IF NOT EXISTS scan_evidence_context (
+        scan_id TEXT PRIMARY KEY REFERENCES scans(scan_id) ON DELETE CASCADE,
+        context_json TEXT NOT NULL
+    );
     """
 
     try:
@@ -322,6 +328,7 @@ def save_scan(
     completed_at_utc: str | None = None,
     scan_id: str | None = None,
     database_path: str | Path = DEFAULT_DATABASE_PATH,
+    evidence_context: Mapping[str, Any] | None = None,
 ) -> str:
     """Store one complete scan and return its scan identifier.
 
@@ -399,6 +406,16 @@ def save_scan(
 
         seen_check_ids.add(check_id)
 
+    context_json = None
+    if evidence_context is not None:
+        try:
+            evidence = assess_context(evidence_context, result_list)
+            if evidence["missing_selected_records"]:
+                raise ValueError("Selected records must be present before persistence")
+            context_json = json.dumps(evidence_context, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise DatabaseError(f"Invalid evidence context: {exc}") from exc
+
     initialize_database(database_path)
 
     insert_scan_sql = """
@@ -454,6 +471,12 @@ def save_scan(
                         summary["coverage_percentage"],
                     ),
                 )
+
+                if context_json is not None:
+                    connection.execute(
+                        "INSERT INTO scan_evidence_context VALUES (?, ?)",
+                        (scan_id, context_json),
+                    )
 
                 for result in result_list:
                     connection.execute(
@@ -528,6 +551,10 @@ def get_scan(
                 results_sql,
                 (scan_id,),
             ).fetchall()
+            context_row = connection.execute(
+                "SELECT context_json FROM scan_evidence_context WHERE scan_id = ?",
+                (scan_id,),
+            ).fetchone()
     except sqlite3.Error as exc:
         raise DatabaseError(
             f"Could not retrieve scan {scan_id!r}: {exc}"
@@ -548,6 +575,13 @@ def get_scan(
             ) from exc
 
         scan["results"].append(result)
+
+    if context_row is not None:
+        try:
+            scan["evidence_context"] = json.loads(context_row["context_json"])
+            scan["evidence_summary"] = assess_context(scan["evidence_context"], scan["results"])
+        except (ValueError, TypeError) as exc:
+            raise DatabaseError(f"Stored evidence context is invalid: {exc}") from exc
 
     return scan
 
@@ -584,9 +618,37 @@ def list_scans(
                 query,
                 (limit,),
             ).fetchall()
+
+            scans = [dict(row) for row in rows]
+
+            # Attach the recomputed evidence summary where a scan has a
+            # stored context, so list views (e.g. scan history) can show
+            # the baseline decision without opening each scan. Unlike
+            # get_scan, listing degrades gracefully: a context that no
+            # longer validates leaves the summary absent instead of
+            # making the whole history unreadable.
+            for scan in scans:
+                context_row = connection.execute(
+                    "SELECT context_json FROM scan_evidence_context WHERE scan_id = ?",
+                    (scan["scan_id"],),
+                ).fetchone()
+                if context_row is None:
+                    continue
+                result_rows = connection.execute(
+                    "SELECT check_id, status FROM scan_results WHERE scan_id = ?",
+                    (scan["scan_id"],),
+                ).fetchall()
+                try:
+                    context = json.loads(context_row["context_json"])
+                    scan["evidence_summary"] = assess_context(
+                        context,
+                        [dict(row) for row in result_rows],
+                    )
+                except (ValueError, TypeError):
+                    continue
     except sqlite3.Error as exc:
         raise DatabaseError(
             f"Could not list stored scans: {exc}"
         ) from exc
 
-    return [dict(row) for row in rows]
+    return scans

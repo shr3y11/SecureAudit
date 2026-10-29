@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -199,6 +200,7 @@ def test_missing_script_is_rejected(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.skipif(shutil.which("powershell.exe") is None, reason="Requires Windows PowerShell")
 def test_invalid_json_becomes_error_result(tmp_path: Path) -> None:
     """Malformed scanner output must not crash the application."""
 
@@ -230,6 +232,7 @@ def test_invalid_json_becomes_error_result(tmp_path: Path) -> None:
     assert "invalid JSON" in result["error_message"]
 
 
+@pytest.mark.skipif(shutil.which("powershell.exe") is None, reason="Requires Windows PowerShell")
 def test_timeout_becomes_error_result(tmp_path: Path) -> None:
     """Scripts exceeding the allowed duration must return Error."""
 
@@ -268,6 +271,7 @@ def test_timeout_becomes_error_result(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.skipif(shutil.which("powershell.exe") is None, reason="Requires Windows PowerShell")
 def test_valid_result_is_normalized(tmp_path: Path) -> None:
     """Successful script output should produce the normalized result contract."""
 
@@ -321,6 +325,7 @@ def test_valid_result_is_normalized(tmp_path: Path) -> None:
     assert len(result["evidence"]) == 1
 
 
+@pytest.mark.skipif(shutil.which("powershell.exe") is None, reason="Requires Windows PowerShell")
 def test_result_check_id_mismatch_becomes_error(tmp_path: Path) -> None:
     """A script cannot impersonate a different authorized check."""
 

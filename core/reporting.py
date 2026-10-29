@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from core.paths import reports_directory as default_reports_directory
+from core.evidence import assess_context
 
 
 DEFAULT_REPORTS_DIRECTORY: Final[Path] = default_reports_directory()
@@ -337,6 +338,33 @@ def build_html_report(
         )
 
     _validate_scan(scan)
+
+    evidence_html = ""
+    if "evidence_context" in scan:
+        try:
+            evidence = assess_context(scan["evidence_context"], scan["results"])
+        except (ValueError, TypeError) as exc:
+            raise ReportingError(f"Invalid evidence context: {exc}") from exc
+        omitted = ", ".join(cid for cid, state in evidence["states"].items() if state == "O") or "None"
+        evidence_html = f"""
+        <section class="disclaimer" aria-label="Baseline evidence completeness">
+            <h2>Baseline evidence completeness</h2>
+            <p>Baseline coverage: {_format_percentage(evidence['baseline_coverage'])}
+            ({evidence['baseline_count']} required checks).</p>
+            <p>Possible complete-baseline pass fraction:
+            {_format_percentage(evidence['lower_bound'])} to {_format_percentage(evidence['upper_bound'])}.</p>
+            <p>Aggregate threshold: {_format_percentage(evidence['threshold_percentage'])}.
+            Decision: <strong>{_escape(evidence['decision'])}</strong>.</p>
+            <p>Omitted required checks: {_escape(omitted)}.</p>
+            <p>Baseline version: {_escape(evidence['baseline_version'])}.
+            Decision version: {_escape(evidence['decision_version'])}.
+            Catalog SHA-256: {_escape(evidence['catalog_sha256'])}.</p>
+            <p>ABOVE means every permitted completion meets the aggregate threshold.
+            BELOW means every completion falls below it. UNRESOLVED means missing
+            evidence could change that conclusion. Bounds assume correct Pass/Fail
+            readings. Mandatory controls require separate review.</p>
+        </section>
+        """
 
     results_html = "\n".join(
         _render_result(result)
@@ -692,6 +720,7 @@ def build_html_report(
             </div>
         </section>
 
+        {evidence_html}
         <h2 class="section-heading">Technical assessment results</h2>
 
         <section aria-label="Technical assessment results">

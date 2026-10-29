@@ -1,0 +1,57 @@
+# SecureAudit evidence completeness study
+
+This is a finite-state computational study of reporting semantics. Generated
+vectors are not Windows machines, observed incidents, or field error rates.
+
+## Reproduce
+
+From the repository root using Python 3.12:
+
+```powershell
+python -m pip install pytest==8.4.2
+python -m pytest -q
+python research/run_study.py
+```
+
+No additional dependency is needed for the enumeration. `results/` contains
+six CSV files, summary JSON, and SHA-256 checksums. Environment metadata can
+change between operating systems; compare substantive counts as well as hashes.
+
+Expected model sizes: 243 full-selection vectors, 1,023 vectors allowing errors
+and omissions, 992 truth/selection pairs, and 5,110 evidence-resolution edges.
+The completion oracle must report zero classification/containment discrepancies
+and zero stable-decision reversals. The oracle is algorithmically separate from
+the bounds, but shares the binary model assumptions.
+
+The independently executable study adapter is in `run_study.py`. The application
+implementation is `core/evidence.py`. The production-module test explicitly
+checks all 1,023 vectors against every binary completion at 60%, 80%, and 100%.
+
+## Interpret
+
+For a fixed baseline of N checks, record P passes, F failures, E errors, and O
+omitted required checks. Baseline coverage is `(P+F)/N`. The possible complete
+pass fraction lies in `[P/N, (P+E+O)/N]`. ABOVE means its lower bound meets the
+chosen threshold, BELOW means its upper bound falls below it, and UNRESOLVED
+means the missing readings could change the aggregate conclusion.
+
+The default 80% is illustrative, not a regulatory requirement. All original
+Error states stay visible. Mandatory controls need separate review. Correct
+P/F observations are an assumption. Bounds are logical, not confidence intervals.
+
+## Application scope
+
+This feature branch follows the project's documented `develop` workflow and
+extends the M4 local scan, SQLite history, and HTML report. It does not change
+the M5 central dashboard or its six-check synthetic demo catalog on `main`.
+It does not produce OSCAL/XCCDF output or benchmark other scanners.
+
+Every new local scan snapshots enabled catalog IDs, catalog version/digest,
+selection, rational threshold, and decision version. The additive SQLite
+context table preserves old records, whose original baselines remain unknown.
+HTML recomputes the summary from stored context and results. The digest
+identifies a catalog snapshot and does not authenticate the endpoint.
+
+See [Windows validation protocol](../docs/RESEARCH_VALIDATION.md). No real
+Windows ground-truth captures accompany this feature yet. Four existing
+PowerShell integration tests require a Windows runner.

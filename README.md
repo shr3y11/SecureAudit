@@ -236,3 +236,11 @@ Select → Scan → Collect → Assess → Score → Store → Report
 ```
 
 The next major architectural phase is a future centralized version using reusable core logic behind FastAPI and endpoint agents.
+
+## Research reporting extension
+
+The `codex/evidence-completeness` feature adds fixed-baseline coverage, possible
+complete pass-fraction bounds, and an aggregate threshold decision to new local
+HTML reports. It snapshots catalog membership in SQLite and preserves the
+existing pass rate and selected-check coverage. See [research reproduction](research/README.md)
+and the [Windows validation protocol](docs/RESEARCH_VALIDATION.md).
