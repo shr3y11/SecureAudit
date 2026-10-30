@@ -39,7 +39,13 @@ jobs:
           if (-not $exe) { throw 'Packaged launcher missing' }
           $env:SECUREAUDIT_SELF_TEST_RESULT = Join-Path $pwd 'packaged-self-test.json'
           $process = Start-Process -FilePath $exe.FullName -Wait -PassThru
-          if ($process.ExitCode -ne 0) { throw 'Packaged launcher failed' }
+          if ($process.ExitCode -ne 0) {
+            if (Test-Path $env:SECUREAUDIT_SELF_TEST_RESULT) { Get-Content $env:SECUREAUDIT_SELF_TEST_RESULT }
+            $env:TCL_LIBRARY = Join-Path $exe.DirectoryName '_tcl_data'
+            $env:TK_LIBRARY = Join-Path $exe.DirectoryName '_tk_data'
+            & (Join-Path $exe.DirectoryName 'python.exe') -c "import json; from launcher import release_self_test; print(json.dumps(release_self_test(), indent=2))"
+            throw 'Packaged launcher failed'
+          }
           if (-not (Test-Path $env:SECUREAUDIT_SELF_TEST_RESULT)) { throw 'Missing packaged self-test record' }
           $result = Get-Content $env:SECUREAUDIT_SELF_TEST_RESULT -Raw | ConvertFrom-Json
           if ($result.self_test -ne 'passed') { throw 'Packaged self-test did not pass' }
