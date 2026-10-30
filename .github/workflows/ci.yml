@@ -37,13 +37,9 @@ jobs:
       # execution tests.
       - if: runner.os == 'Windows'
         run: python -m pytest -q
-      # On Linux, 11 tests are bound to Windows-only behaviour
-      # (ctypes.windll admin checks, subprocess.CREATE_NO_WINDOW in the
-      # scanner, and the Windows-only local-scan path in Central). They
-      # are deselected explicitly -- not skipped silently -- and each is
-      # listed so the gap stays visible. PR #8 carries portability fixes
-      # for several of them; remove the corresponding deselects as those
-      # land on main.
+      # Nine formerly excluded admin/scanner tests now pass portably.
+      # Only the two Central local-scan tests require real Windows; the
+      # full Windows job above still executes them.
       # Coverage is measured and reported in the same run, not gated:
       # the first measured baseline (Linux, Oct 2026) is 64% overall,
       # with app.py at 15% (Tkinter GUI paths) as the known weak spot.
@@ -53,17 +49,8 @@ jobs:
           python -m pytest -q
           --cov=core --cov=secureaudit_central --cov=app --cov=launcher
           --cov-report=term-missing:skip-covered
-          --deselect tests/test_admin.py::test_is_admin_returns_true_when_windows_reports_admin
-          --deselect tests/test_admin.py::test_is_admin_returns_false_when_windows_reports_standard_user
-          --deselect tests/test_admin.py::test_is_admin_wraps_windows_api_failure
           --deselect tests/test_central.py::test_local_scan_accepts_no_arbitrary_command_and_prevents_duplicate_queue
           --deselect tests/test_central.py::test_failed_scanner_creates_failed_job_not_false_evidence
-          --deselect tests/test_scanner.py::test_absolute_script_path_is_rejected
-          --deselect tests/test_scanner.py::test_traversal_script_path_is_rejected
-          --deselect tests/test_scanner.py::test_invalid_json_becomes_error_result
-          --deselect tests/test_scanner.py::test_timeout_becomes_error_result
-          --deselect tests/test_scanner.py::test_valid_result_is_normalized
-          --deselect tests/test_scanner.py::test_result_check_id_mismatch_becomes_error
 
   postgres:
     # The PostgreSQL integration test self-skips without this variable;
