@@ -23,25 +23,38 @@ PY
 }
 
 if command -v ufw >/dev/null 2>&1; then
-  out="$(ufw status 2>/dev/null | head -1)"
+  out="$(ufw status 2>&1)"; rc=$?
   EVIDENCE="manager=ufw; report=${out}"
-  if printf '%s' "$out" | grep -qi "active"; then
+  if [ "$rc" -ne 0 ]; then
+    ERROR_MSG="UFW status could not be read (exit ${rc}): ${out}"
+  elif printf '%s\n' "$out" | grep -qiE '^Status:[[:space:]]+active[[:space:]]*$'; then
     STATUS="Pass"; OBSERVED="UFW firewall is active"
-  else
+  elif printf '%s\n' "$out" | grep -qiE '^Status:[[:space:]]+inactive[[:space:]]*$'; then
     STATUS="Fail"; OBSERVED="UFW firewall is not active (${out})"
+  else
+    ERROR_MSG="Unrecognised UFW status output: ${out}"
   fi
 elif command -v firewall-cmd >/dev/null 2>&1; then
-  state="$(firewall-cmd --state 2>/dev/null || echo unknown)"
+  state="$(firewall-cmd --state 2>&1)"; rc=$?
   EVIDENCE="manager=firewalld; state=${state}"
-  if [ "$state" = "running" ]; then
+  if [ "$rc" -eq 0 ] && [ "$state" = "running" ]; then
     STATUS="Pass"; OBSERVED="firewalld is running"
-  else
+  elif [ "$state" = "not running" ]; then
     STATUS="Fail"; OBSERVED="firewalld state is ${state}"
+  else
+    ERROR_MSG="firewalld status could not be determined (exit ${rc}): ${state}"
   fi
-elif systemctl is-active --quiet nftables 2>/dev/null; then
-  STATUS="Pass"; OBSERVED="nftables service is active"; EVIDENCE="manager=nftables-service; active=true"
-elif systemctl is-active --quiet firewalld 2>/dev/null; then
-  STATUS="Pass"; OBSERVED="firewalld service is active"; EVIDENCE="manager=firewalld-service; active=true"
+elif command -v systemctl >/dev/null 2>&1; then
+  for manager in nftables firewalld; do
+    state="$(systemctl is-active "$manager" 2>&1)"; rc=$?
+    EVIDENCE="${EVIDENCE}${manager}=${state}; "
+    if [ "$rc" -eq 0 ] && [ "$state" = "active" ]; then
+      STATUS="Pass"; OBSERVED="${manager} service is active"; break
+    fi
+  done
+  if [ "$STATUS" = "Error" ]; then
+    ERROR_MSG="No supported active firewall service could be established; service-manager errors do not prove a disabled firewall."
+  fi
 else
   ERROR_MSG="No supported firewall manager (ufw, firewalld, nftables service) could be assessed on this host."
   EVIDENCE="manager=none-detected"
