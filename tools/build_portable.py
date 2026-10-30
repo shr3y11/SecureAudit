@@ -15,6 +15,12 @@ if os.name != "nt" or sys.version_info[:2] != (3, 12):
     raise SystemExit("Portable release builds require Python 3.12 on Windows x64; use the matching runtime for native packages.")
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from core.catalog_sig import verify_catalog_directory
+from core import catalog_trust
+verify_catalog_directory(ROOT / "checks", require_signed=True,
+                         trusted_public_key_sha256=catalog_trust.PUBLIC_KEY_SHA256)
+
 TOOLS = ROOT / ".tools"
 VERSION = runpy.run_path(str(ROOT / "secureaudit_central" / "__init__.py"))["__version__"]
 DEST = ROOT / "dist" / f"SecureAudit-v{VERSION}"

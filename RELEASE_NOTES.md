@@ -24,3 +24,7 @@ Close the previous app, back up applicable local data, and extract to a new fold
 This is a beta, local-first tool. Remote agents, enterprise RBAC, LLM crosswalking and unfinished advanced-platform edits are excluded. Demo fleets are synthetic. The research HTML extension is in the original desktop workflow, not a newly expanded Central dashboard. Hashes are not proof of trustworthy evidence. No full-framework certification or measured enterprise accuracy is claimed.
 
 Build and test evidence is supplied in BUILD-VERIFICATION.txt and packaged-self-test.json. The workflow does not publish the release automatically.
+
+## Current release blocker
+
+Owner catalog signing material is absent. Windows release packaging now fails early until the owner adds the public key, signed catalog manifest and pinned trust anchor. The source package is provided for development/review; do not describe it as a ready standalone Windows binary. See the signing instructions in docs/RELEASE_GUIDE.md. The Tcl/Tk private DLL dependency packaging defect found during candidate testing has been fixed.

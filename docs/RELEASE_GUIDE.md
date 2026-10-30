@@ -48,3 +48,30 @@ The workflow prepares files only. It does not create a tag, publish a release or
 ## Validation limits
 
 Packaged startup/demo/API tests and automated software tests do not establish Windows collector accuracy, formal compliance, full UI usability or deployment compatibility on all machines. Independent review of hosted observations and additional Home/Pro testing remain separate tasks.
+
+## Required owner catalog signing before a Windows build
+
+The current repository does not contain catalog signature material. Packaged
+startup requires it and the portable builder now checks it before building.
+The source ZIP can be used for development, but no runnable Windows ZIP is
+claimed until the owner signs and the packaged self-test passes.
+
+On your Windows machine, check out release/v0.6.0-beta and install requirements-dev.txt.
+If you do not already have an owner catalog key, generate one outside the repository.
+Keep it private and backed up; never upload or commit it.
+
+```powershell
+$catalogKey = Join-Path $env:USERPROFILE 'SecureAudit-Keys/catalog.key'
+.\.venv\Scripts\python.exe tools/sign_catalog.py generate --private-key $catalogKey
+.\.venv\Scripts\python.exe tools/sign_catalog.py sign --private-key $catalogKey
+git add checks/catalog.pub.pem checks/catalog.sig.json core/catalog_trust.py
+git commit -m "security: sign release catalog with owner key"
+git push origin release/v0.6.0-beta
+```
+
+If you already have the corresponding keypair, use your existing private-key
+path and sign; do not overwrite or rotate the key casually. Commit the public
+key, signature manifest and trust anchor together. A new build runs after the
+push. It must pass both the source tests and extracted-launcher self-test
+before its Windows ZIP is published. The public-key anchor protects the
+catalog under its stated trust model; it does not sign the entire application.

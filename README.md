@@ -6,7 +6,9 @@ Windows security configuration assessment and local audit-evidence reporting.
 
 This candidate combines the Central dashboard with the local scanner, evidence-integrity checks, and research reporting work committed after v0.5.0-beta. It remains a beta application. The source and Windows package are prepared by the **Windows release candidate** workflow. Download its artifacts from [Actions](https://github.com/shr3y11/SecureAudit/actions); published versions appear under [Releases](https://github.com/shr3y11/SecureAudit/releases).
 
-### Windows quick start
+**Current packaging prerequisite:** owner catalog signing material is absent. The source candidate is downloadable; the Windows ZIP is available only after the owner completes the [signing step](docs/RELEASE_GUIDE.md#required-owner-catalog-signing-before-a-windows-build) and packaged startup verification passes.
+
+### Windows quick start (after the Windows build passes)
 
 1. Download `SecureAudit-v0.6.0-beta-Windows-x64.zip`.
 2. Extract the entire ZIP to a writable folder.
