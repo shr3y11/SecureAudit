@@ -73,19 +73,22 @@ class Lab:
         for i in range(3):
             r = self.client.post(f"/api/endpoints/{self.endpoint_id}/evidence", json=_payload(i))
             assert r.status_code == 200, r.text
-        self.checkpoint = self._take_checkpoint()
+        self.checkpoint_bundle = self._bundle_bytes()
+        self.checkpoint = self._take_checkpoint(self.checkpoint_bundle)
 
     def _bundle_bytes(self):
         r = self.client.get(f"/api/endpoints/{self.endpoint_id}/bundle")
         assert r.status_code == 200
         return r.content
 
-    def _take_checkpoint(self):
+    def _take_checkpoint(self, bundle_bytes=None):
         history = self.client.get(f"/api/endpoints/{self.endpoint_id}/history").json()
-        with zipfile.ZipFile(io.BytesIO(self._bundle_bytes())) as z:
+        with zipfile.ZipFile(io.BytesIO(bundle_bytes or self._bundle_bytes())) as z:
             manifest_hash = hashlib.sha256(z.read("manifest.json")).hexdigest()
+            files = json.loads(z.read("manifest.json"))["files"]
         return {"submissions": {a["submission_id"]: a["sha256"] for a in history},
-                "count": len(history), "bundle_manifest_sha256": manifest_hash}
+                "count": len(history), "files": files,
+                "bundle_manifest_sha256": manifest_hash}
 
     # -- verifiers ------------------------------------------------------
     def internal_detects(self):
@@ -94,7 +97,11 @@ class Lab:
 
     def checkpoint_detects(self):
         current = self._take_checkpoint()
-        return current != self.checkpoint
+        # A fresh export has a fresh generated_at. Compare committed content,
+        # not presentation-time metadata. A change is not proof of an attack:
+        # legitimate new evidence must also update a trusted checkpoint.
+        return any(current[key] != self.checkpoint[key]
+                   for key in ("submissions", "count", "files"))
 
     @staticmethod
     def bundle_self_consistent(bundle_bytes):
@@ -137,7 +144,7 @@ def run_experiments():
         rows = db.execute("SELECT id, evidence_json FROM central_assessments WHERE submission_id = 'lab-0'").fetchall()
         for row_id, evidence in rows:
             forged = evidence.replace('"Pass"', '"Fail"')
-            db.execute("UPDATE central_assessments SET evidence_json = ?, sha256 = ? WHERE id = ?",
+            db.execute("UPDATE central_assessments SET evidence_json = ?, sha256 = ?, passed = 0, failed = 2 WHERE id = ?",
                        (forged, hashlib.sha256(forged.encode()).hexdigest(), row_id))
     experiments.append({"attack": "modify_and_reforge_hash",
                         "description": "Edit stored evidence AND recompute its recorded hash to match.",
@@ -180,7 +187,8 @@ def run_experiments():
                         "note": "Accepted as a new submission; the checkpoint sees the unexpected addition and the duplicate content hash."})
 
     lab = _fresh()
-    bundle = bytearray(lab._bundle_bytes())
+    # Forge the exact export whose original manifest digest was retained.
+    bundle = bytearray(lab.checkpoint_bundle)
     with zipfile.ZipFile(io.BytesIO(bytes(bundle))) as z:
         files = {name: z.read(name) for name in z.namelist()}
     forged_assessments = files["assessments.json"].replace(b'"Fail"', b'"Pass"')
@@ -202,12 +210,15 @@ def run_experiments():
                         "bundle_self_check": "consistent" if Lab.bundle_self_consistent(forged_bundle) else "inconsistent",
                         "note": "A bundle alone proves internal consistency, never origin; only the external manifest hash exposes the forgery."})
 
+    for experiment in experiments:
+        experiment["capability"] = ("authenticated API submitter" if experiment["attack"].startswith("replay_")
+                                    else "database/bundle writer; no API token")
     return experiments
 
 
 def main():
     experiments = run_experiments()
-    RESULTS.write_text(json.dumps({"attacker_model": "write access to Central's database file or an exported bundle; no API token",
+    RESULTS.write_text(json.dumps({"attacker_model": "Two separate capabilities: database/bundle writer without API token; authenticated API submitter for replay cases",
                                    "experiments": experiments}, indent=2) + "\n", encoding="utf-8")
     for e in experiments:
         print(f"{e['attack']:32} internal={e['internal_verify']:12} checkpoint={e['checkpoint']}")

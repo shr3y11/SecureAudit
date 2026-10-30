@@ -5,7 +5,10 @@ fresh instances and pin the outcomes the paper reports — including
 the negative ones. If a future change silently alters what the
 system can or cannot detect, this file fails, which is the point.
 """
-from research.tamper_lab import run_experiments
+from research.tamper_lab import run_experiments, Lab, _payload
+import hashlib
+import io
+import zipfile
 
 import pytest
 
@@ -23,6 +26,31 @@ def test_all_seven_experiments_ran(results):
         "replay_identical_submission", "replay_same_id_altered_content",
         "replay_new_id_same_content", "forge_bundle_and_manifest",
     }
+
+
+def test_untouched_system_does_not_trigger_checkpoint(tmp_path):
+    lab = Lab(tmp_path)
+    try:
+        assert not lab.internal_detects()
+        assert not lab.checkpoint_detects()
+        assert not lab.checkpoint_detects()
+        with zipfile.ZipFile(io.BytesIO(lab.checkpoint_bundle)) as z:
+            assert hashlib.sha256(z.read("manifest.json")).hexdigest() == lab.checkpoint["bundle_manifest_sha256"]
+    finally:
+        lab.client.__exit__(None, None, None)
+
+
+def test_legitimate_new_evidence_changes_checkpoint_but_is_not_tampering(tmp_path):
+    lab = Lab(tmp_path)
+    try:
+        response = lab.client.post(f"/api/endpoints/{lab.endpoint_id}/evidence", json=_payload(5))
+        assert response.status_code == 200
+        assert lab.checkpoint_detects()  # drift, not a maliciousness classifier
+        assert not lab.internal_detects()
+        lab.checkpoint = lab._take_checkpoint()
+        assert not lab.checkpoint_detects()
+    finally:
+        lab.client.__exit__(None, None, None)
 
 
 def test_naive_modification_is_detected_internally(results):
