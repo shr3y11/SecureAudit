@@ -1,5 +1,19 @@
 ﻿# SecureAudit
 
+## Milestone 5 — SecureAudit Central 0.5.0
+
+The new central backend reuses the existing scanner and scoring engine. It adds FastAPI, PostgreSQL support, a standalone SQLite mode, a browser dashboard, endpoint inventory, timestamped evidence history, SHA-256 hashes, CSV/JSON export, and a persistent demo assessment queue.
+
+The original desktop application below remains available through `app.py`. The new entry point is `launcher.py`.
+
+**Windows release:** extract the complete `SecureAudit-M5-Windows.zip` folder and double-click `SecureAudit-M5\SecureAuditCentral.exe`. Keep all files together. The portable distribution includes an unmodified Python Software Foundation signed interpreter; SecureAudit source itself is not code-signed. No Python installation is required. Windows Application Control blocked the unsigned PyInstaller one-file build on this development machine, so the verified release uses the portable folder.
+
+**Demo:** Create demo fleet → Assess demo fleet → Overview → inspect endpoint evidence → export JSON/CSV. Demo endpoints are synthetic fixtures; they are never represented as real devices. **Scan this PC** runs the five existing approved PowerShell modules against the current computer. Run the executable as Administrator when privileged checks are required.
+
+See [M5 setup and demonstration](docs/M5_CENTRAL.md) for PostgreSQL configuration, architecture, build instructions, test evidence, and scope limits. Multi-user RBAC, remote agents, policy ingestion, and AI governance remain later milestones.
+
+![SecureAudit Central dashboard running from the Windows release](docs/demo/dashboard.jpg)
+
 SecureAudit is a local Windows technical compliance-assessment tool that runs a predefined set of approved PowerShell checks, collects structured evidence, calculates an assessment score and coverage, stores scan history in SQLite, and generates local HTML reports.
 
 SecureAudit V1 is designed as a **standalone Windows desktop MVP**. It performs automated point-in-time technical configuration assessments for selected Windows baseline checks. It does **not** certify complete compliance with CIS Controls, CIS Benchmarks, ISO 27001, NIST CSF, or any other framework.
@@ -24,7 +38,7 @@ SecureAudit V1 is designed as a **standalone Windows desktop MVP**. It performs 
 - Standalone HTML reports
 - PyInstaller one-file packaging
 - Persistent packaged data under `%LOCALAPPDATA%\SecureAudit`
-- 89 automated tests passing on the development machine
+- Automated test suite covering the scanner, scoring, database, reporting, desktop workflow and Central API
 
 ## Application Workflow
 
@@ -127,11 +141,10 @@ SecureAudit will request Windows administrator elevation when required.
 python -m pytest -v
 ```
 
-Latest verified development-machine result:
-
-```text
-89 passed
-```
+The full suite is expected to pass on Windows. A small number of tests
+exercise real PowerShell execution and are skipped where `powershell.exe`
+is unavailable. (A fixed pass count is deliberately not recorded here:
+it went stale as the suite grew.)
 
 A recurring Windows pytest temporary-directory cleanup warning may appear after the successful result. It occurs during pytest exit cleanup and has not invalidated the completed test suite.
 

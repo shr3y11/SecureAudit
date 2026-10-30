@@ -25,6 +25,10 @@ from core.paths import (
     catalog_path as default_catalog_path,
     powershell_directory as default_powershell_directory,
 )
+from core.catalog_sig import CatalogIntegrityError, verify_catalog_directory
+from core import catalog_trust
+import sys
+import os
 
 DEFAULT_TIMEOUT_SECONDS: Final[int] = 30
 ALLOWED_STATUSES: Final[frozenset[str]] = frozenset({"Pass", "Fail", "Error"})
@@ -114,6 +118,19 @@ def load_catalog(catalog_path: Path | None = None) -> dict[str, Any]:
 
     if not path.is_file():
         raise CatalogError(f"Check catalog was not found: {path}")
+
+    # Authenticity first (item #7): when signing material ships beside
+    # the catalog, a tampered catalog or collector script is rejected
+    # before any of its contents are parsed or trusted.
+    try:
+        verify_catalog_directory(
+            path.parent,
+            require_signed=bool(getattr(sys, "frozen", False)) or
+                           os.environ.get("SECUREAUDIT_REQUIRE_SIGNED_CATALOG") == "1",
+            trusted_public_key_sha256=catalog_trust.PUBLIC_KEY_SHA256,
+        )
+    except CatalogIntegrityError as exc:
+        raise CatalogError(f"Catalog integrity verification failed: {exc}") from exc
 
     try:
         with path.open("r", encoding="utf-8-sig") as catalog_file:

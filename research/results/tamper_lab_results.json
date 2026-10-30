@@ -1,0 +1,65 @@
+{
+  "attacker_model": "Two separate capabilities: database/bundle writer without API token; authenticated API submitter for replay cases",
+  "experiments": [
+    {
+      "attack": "modify_evidence",
+      "description": "Edit one stored check result (Pass to Fail), recorded hash untouched.",
+      "internal_verify": "detected",
+      "checkpoint": "detected",
+      "capability": "database/bundle writer; no API token"
+    },
+    {
+      "attack": "modify_and_reforge_hash",
+      "description": "Edit evidence, recompute its hash AND update reporting counters coherently.",
+      "internal_verify": "not_detected",
+      "checkpoint": "detected",
+      "capability": "database/bundle writer; no API token"
+    },
+    {
+      "attack": "delete_latest_assessment",
+      "description": "Delete the newest assessment row outright.",
+      "internal_verify": "not_detected",
+      "checkpoint": "detected",
+      "capability": "database/bundle writer; no API token"
+    },
+    {
+      "attack": "replay_identical_submission",
+      "description": "Resubmit byte-identical evidence under the same submission ID.",
+      "api_status": 200,
+      "rows_added": 0,
+      "internal_verify": "n/a",
+      "checkpoint": "not_detected",
+      "note": "Idempotent by design: accepted, no duplicate row, nothing to detect.",
+      "capability": "authenticated API submitter"
+    },
+    {
+      "attack": "replay_same_id_altered_content",
+      "description": "Reuse a submission ID with different (all-pass) content.",
+      "api_status": 409,
+      "rows_added": 0,
+      "internal_verify": "n/a",
+      "checkpoint": "not_detected",
+      "note": "Rejected with 409 by the API: the ID is bound to its first evidence.",
+      "capability": "authenticated API submitter"
+    },
+    {
+      "attack": "replay_new_id_same_content",
+      "description": "Submit identical evidence under a fresh submission ID.",
+      "api_status": 200,
+      "rows_added": 1,
+      "internal_verify": "not_detected",
+      "checkpoint": "detected",
+      "note": "Accepted as a new submission; the checkpoint sees a changed evidence set, as it also does for legitimate additions; it does not classify intent.",
+      "capability": "authenticated API submitter"
+    },
+    {
+      "attack": "forge_bundle_and_manifest",
+      "description": "Rewrite an exported bundle and recompute its manifest hashes.",
+      "internal_verify": "n/a",
+      "checkpoint": "detected",
+      "bundle_self_check": "consistent",
+      "note": "A bundle alone proves internal consistency, never origin; only the external manifest hash exposes the forgery.",
+      "capability": "database/bundle writer; no API token"
+    }
+  ]
+}

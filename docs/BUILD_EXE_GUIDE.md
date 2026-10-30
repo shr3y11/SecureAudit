@@ -125,3 +125,24 @@ SecureAudit.exe
 V1 is not code-signed.
 
 Unsigned executables may trigger Windows reputation or SmartScreen warnings on other systems. Code signing is a future release-hardening task.
+
+## Required catalog signing before packaging
+
+Both shipped specs now require signed catalog/PowerShell collector resources
+and a public-key fingerprint pinned in `core/catalog_trust.py`. Packaging fails
+until the owner completes the signing procedure; unsigned source development
+remains available. This policy concerns catalog authenticity, distinct from
+Windows executable code signing above.
+
+```powershell
+python tools/sign_catalog.py generate --private-key C:\Keys\secureaudit-catalog.key
+python tools/sign_catalog.py sign --private-key C:\Keys\secureaudit-catalog.key
+```
+
+Generate only once; keep the private key outside the repository. Commit
+`checks/catalog.pub.pem`, `checks/catalog.sig.json` and `core/catalog_trust.py`
+with the catalog changes. After each covered catalog/PowerShell change, re-sign.
+The verifier code and its embedded pin must remain trusted. Replacing both
+signature files is rejected under the pinned policy; deleting both is rejected
+at release build and runtime. Linux experimental collectors are not covered by
+this Windows catalog signature. No owner key was created by the repair work.

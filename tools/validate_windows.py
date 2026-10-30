@@ -6,7 +6,6 @@ with collectors, so manual independent review is required before accuracy claims
 import argparse
 import csv
 from datetime import datetime, timezone
-import hashlib
 import json
 import os
 from os import environ
@@ -22,6 +21,7 @@ from core.evidence import make_context
 from core.reporting import write_html_report
 from core.scanner import load_catalog, run_check
 from core.scoring import calculate_score
+from tools.capture_archive import seal_capture, write_json
 
 
 def reference():
@@ -32,10 +32,6 @@ def reference():
         timeout=120, check=True, shell=False,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     return json.loads(process.stdout)
-
-
-def write_json(path, content):
-    path.write_text(json.dumps(content, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
 
 
 def main():
@@ -84,12 +80,11 @@ def main():
                                 "second_interface_evidence": "", "reviewer": "",
                                 "reviewed_at_utc": "", "notes": ""})
     with (args.output / "manual-review.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=review_rows[0].keys())
+        writer = csv.DictWriter(handle, fieldnames=review_rows[0].keys(), lineterminator="\n")
         writer.writeheader()
         writer.writerows(review_rows)
-    write_json(args.output / "sha256.json", {
-        str(path.relative_to(args.output)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(args.output.rglob("*")) if path.is_file()})
+    archive = seal_capture(args.output)
+    print(f"Byte-preserving capture archive: {archive}")
     print(f"Captured {len(review_rows)} check readings. Independent manual review is pending.")
 
 

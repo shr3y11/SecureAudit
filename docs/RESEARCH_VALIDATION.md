@@ -94,6 +94,21 @@ initial SHA-256 manifest. Review edits change the review file's hash; retain the
 initial manifest and record a second manifest after review. Neither manifest
 proves provenance against a malicious host.
 
+Each completed case also creates a sibling `CASE.capture.zip` before Git can
+normalize text or exclude SQLite. This archive is the authoritative byte copy;
+`sha256.json` uses POSIX paths and JSON/CSV are explicitly written with LF.
+Verify with `python tools/capture_archive.py PATH/CASE.capture.zip`. The verifier
+requires the database, exact manifest membership and matching file checksums.
+Commit/archive the ZIP (marked binary in `.gitattributes`) and keep a trusted
+archive digest separately. Never modify a sealed archive to add review verdicts;
+retain it and publish a separately identified review supplement.
+
+Historical run 40939421976 predates this fix: its retained text differs from the
+original manifests after Git normalization, and its referenced databases were
+excluded by `.gitignore`. See `research/windows_observations/retained_inventory.json`
+for an inventory of the retained bytes. It is a derivative index, not recovery
+of the missing databases or proof that the original manifests verify.
+
 ## Independent review
 
 Native reference capture uses separately written collection code, but shares

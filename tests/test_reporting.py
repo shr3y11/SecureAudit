@@ -341,3 +341,31 @@ def test_non_mapping_scan_is_rejected() -> None:
         match="provided as a mapping",
     ):
         build_html_report("not-a-scan")
+
+
+def test_plain_language_section_explains_failures() -> None:
+    """Every non-pass check gets what/why/how in plain language (item #17)."""
+
+    report = build_html_report(stored_scan())
+
+    assert "What this means, in plain language" in report
+    # The BitLocker failure from the fixture, with the catalog's own
+    # description and remediation — not invented text.
+    assert "What happened:" in report
+    assert "Why it matters:" in report
+    assert "How to fix it:" in report
+    assert "Enable BitLocker on the operating-system drive" in report
+
+
+def test_admin_required_error_is_labelled_unresolved_not_failed() -> None:
+    """Permission-aware reporting (item #18).
+
+    The fixture's SMBv1 result is an Error and its catalog entry requires
+    administrator rights, so the report must present it as unresolved,
+    while the stored status and scoring stay untouched.
+    """
+
+    report = build_html_report(stored_scan())
+
+    assert "UNRESOLVED (administrator required)" in report
+    assert "does not" in report and "mean the setting is wrong" in report

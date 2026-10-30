@@ -38,6 +38,11 @@ Thumbs.db
 desktop.ini
 
 # SecureAudit runtime evidence
+central-runtime/
+.m5-staging/
+.tools/
+release-qa/
+access.key
 data/*
 !data/.gitkeep
 
@@ -277,6 +282,7 @@ MANIFEST
 *.manifest
 *.spec
 !SecureAudit.spec
+!SecureAuditCentral.spec
 
 # Installer logs
 pip-log.txt

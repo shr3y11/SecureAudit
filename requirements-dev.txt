@@ -1,0 +1,8 @@
+# Development dependencies are single-sourced: runtime/build pins live in
+# requirements.txt, service pins in requirements-central.txt. This file
+# previously duplicated both lists with different versions (pytest 9.1.1
+# here vs 8.4.2 there), which made CI and local runs disagree.
+-r requirements.txt
+-r requirements-central.txt
+httpx==0.28.1
+pytest-cov==7.1.0

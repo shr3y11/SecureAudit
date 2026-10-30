@@ -274,9 +274,110 @@ def _render_evidence(evidence: Any) -> str:
     return _escape(evidence_json)
 
 
-def _render_result(result: Mapping[str, Any]) -> str:
+def _catalog_by_id() -> dict[str, Mapping[str, Any]]:
+    """Best-effort catalog lookup for report enrichment.
+
+    Reporting must never fail because the catalog cannot be loaded, so
+    any problem yields an empty mapping and the report falls back to the
+    stored result fields alone.
+    """
+
+    try:
+        from core.scanner import load_catalog
+
+        return {check["id"]: check for check in load_catalog().get("checks", [])}
+    except Exception:
+        return {}
+
+
+def _needs_administrator(result: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]]) -> bool:
+    entry = catalog.get(str(result.get("check_id", "")))
+    return bool(entry and entry.get("requires_administrator"))
+
+
+def _status_label(result: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]]) -> str:
+    """Display label for a result status (permission-aware, item #18).
+
+    An Error on a check that requires administrator rights is not a
+    failed control: it is unresolved. The stored status stays "Error"
+    (scoring semantics do not change); only the presentation says so.
+    """
+
+    status = str(result["status"])
+    if status == "Error" and _needs_administrator(result, catalog):
+        return "Error — UNRESOLVED (administrator required)"
+    return status
+
+
+def _plain_language_section(scan: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]]) -> str:
+    """Plain-language summary of what needs attention (item #17).
+
+    Written for a non-specialist reader (for example a faculty reviewer):
+    for every check that did not pass, what happened, why it matters and
+    how to fix it — taken from the catalog's own description and
+    remediation text, never invented here.
+    """
+
+    cards = []
+    for result in scan["results"]:
+        if result["status"] == "Pass":
+            continue
+        entry = catalog.get(str(result.get("check_id", "")), {})
+        name = entry.get("name") or result["check_name"]
+        if result["status"] == "Error" and _needs_administrator(result, catalog):
+            happened = (
+                "SecureAudit could not complete this check because it needs "
+                "administrator rights. This result is unresolved: it does not "
+                "mean the setting is wrong, only that it was not verified."
+            )
+            fix = "Run SecureAudit as Administrator and scan again so this check can be verified."
+        elif result["status"] == "Error":
+            happened = (
+                "SecureAudit could not complete this check"
+                + (f": {result['error_message']}" if result.get("error_message") else ".")
+                + " This result is unresolved, not a failure."
+            )
+            fix = entry.get("remediation") or "Re-run the scan; if the error persists, inspect the technical evidence below."
+        else:
+            happened = f"Expected: {result['expected_value']}. Found: {result['observed_value']}."
+            fix = entry.get("remediation") or "See the technical evidence below for remediation details."
+        why = entry.get("description") or ""
+        severity = entry.get("severity") or ""
+        cards.append(f"""
+        <article class="result-card">
+            <h3>{_escape(name)}</h3>
+            <p><strong>What happened:</strong> {_escape(happened)}</p>
+            {f'<p><strong>Why it matters:</strong> {_escape(why)}</p>' if why else ''}
+            <p><strong>How to fix it:</strong> {_escape(fix)}</p>
+            {f'<p><strong>Severity:</strong> {_escape(severity)}</p>' if severity else ''}
+        </article>
+        """)
+
+    if not cards:
+        return """
+        <section aria-label="Plain language summary">
+            <h2 class="section-heading">What this means, in plain language</h2>
+            <p>Every check that ran passed. Nothing needs attention.</p>
+        </section>
+        """
+    return f"""
+        <section aria-label="Plain language summary">
+            <h2 class="section-heading">What this means, in plain language</h2>
+            <p>These checks did not pass. Each one says what happened, why it
+            matters, and how to fix it. The full technical evidence follows below.</p>
+            {''.join(cards)}
+        </section>
+        """
+
+
+def _render_result(
+    result: Mapping[str, Any],
+    catalog: Mapping[str, Mapping[str, Any]] | None = None,
+) -> str:
     """Render one scanner result as an HTML section."""
 
+    if catalog is None:
+        catalog = _catalog_by_id()
     status = str(result["status"])
     error_message = result.get("error_message")
 
@@ -298,7 +399,7 @@ def _render_result(result: Mapping[str, Any]) -> str:
                 <p class="check-id">{_escape(result["check_id"])}</p>
             </div>
             <span class="status-badge {_status_class(status)}">
-                {_escape(status)}
+                {_escape(_status_label(result, catalog))}
             </span>
         </div>
 
@@ -329,8 +430,15 @@ def _render_result(result: Mapping[str, Any]) -> str:
 
 def build_html_report(
     scan: Mapping[str, Any],
+    *,
+    previous_scan: Mapping[str, Any] | None = None,
 ) -> str:
-    """Build and return a standalone HTML report for one stored scan."""
+    """Build and return a standalone HTML report for one stored scan.
+
+    When ``previous_scan`` is given, the report gains a "Changes since
+    previous scan" section computed by :mod:`core.scan_diff`, including
+    both scans' context snapshots when they have them.
+    """
 
     if not isinstance(scan, Mapping):
         raise ReportingError(
@@ -338,6 +446,36 @@ def build_html_report(
         )
 
     _validate_scan(scan)
+
+    catalog = _catalog_by_id()
+    plain_language_html = _plain_language_section(scan, catalog)
+
+    diff_html = ""
+    if previous_scan is not None:
+        from core.scan_diff import diff_scans
+
+        try:
+            diff = diff_scans(previous_scan, scan)
+        except ValueError as exc:
+            raise ReportingError(f"Invalid previous scan for diff: {exc}") from exc
+        rows = "\n".join(
+            f"<tr><td>{_escape(t['check_id'])}</td><td>{_escape(t['before'] or '—')}</td>"
+            f"<td>{_escape(t['after'] or '—')}</td><td>{_escape(t['change'])}</td></tr>"
+            for t in diff["transitions"] if t["change"] != "unchanged"
+        ) or '<tr><td colspan="4">No check changed status.</td></tr>'
+        counts = diff["counts"]
+        diff_html = f"""
+        <section class="disclaimer" aria-label="Changes since previous scan">
+            <h2>Changes since previous scan</h2>
+            <p>Fixed: {counts['fixed']} · Regressed: {counts['regressed']} ·
+            Changed: {counts['changed']} · Added: {counts['added']} ·
+            Removed: {counts['removed']} · Unchanged: {counts['unchanged']}.</p>
+            <table>
+                <tr><th>Check</th><th>Before</th><th>After</th><th>Change</th></tr>
+                {rows}
+            </table>
+        </section>
+        """
 
     evidence_html = ""
     if "evidence_context" in scan:
@@ -367,7 +505,7 @@ def build_html_report(
         """
 
     results_html = "\n".join(
-        _render_result(result)
+        _render_result(result, catalog)
         for result in scan["results"]
     )
 
@@ -721,6 +859,9 @@ def build_html_report(
         </section>
 
         {evidence_html}
+        {diff_html}
+        {plain_language_html}
+
         <h2 class="section-heading">Technical assessment results</h2>
 
         <section aria-label="Technical assessment results">
@@ -750,10 +891,11 @@ def write_html_report(
     *,
     output_directory: str | Path = DEFAULT_REPORTS_DIRECTORY,
     filename: str | None = None,
+    previous_scan: Mapping[str, Any] | None = None,
 ) -> Path:
     """Generate a report, write it to disk, and return its path."""
 
-    report_html = build_html_report(scan)
+    report_html = build_html_report(scan, previous_scan=previous_scan)
 
     output_path = Path(output_directory)
     output_path.mkdir(
