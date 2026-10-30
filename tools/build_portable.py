@@ -8,6 +8,7 @@ import sys
 import urllib.request
 import zipfile
 import runpy
+import pefile
 from packaging.requirements import Requirement
 
 if os.name != "nt" or sys.version_info[:2] != (3, 12):
@@ -68,6 +69,27 @@ base = Path(sys.base_prefix)
 shutil.copytree(base / "Lib" / "tkinter", packages_dir / "tkinter", dirs_exist_ok=True, ignore=ignore)
 for filename in ("_tkinter.pyd", "tcl86t.dll", "tk86t.dll"):
     shutil.copy2(base / "DLLs" / filename, DEST / filename)
+
+# Tcl/Tk binaries can depend on additional private DLLs (for example zlib1).
+# Resolve their actual PE import closure from this exact Python installation.
+pending = [base / "DLLs" / filename for filename in ("_tkinter.pyd", "tcl86t.dll", "tk86t.dll")]
+visited = set()
+while pending:
+    binary = pending.pop()
+    key = binary.name.lower()
+    if key in visited:
+        continue
+    visited.add(key)
+    with pefile.PE(str(binary), fast_load=True) as image:
+        image.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]])
+        imports = [entry.dll.decode("ascii") for entry in getattr(image, "DIRECTORY_ENTRY_IMPORT", [])]
+    for name in imports:
+        source = next((folder / name for folder in (base / "DLLs", base) if (folder / name).is_file()), None)
+        if source is None:
+            continue  # Windows system DLLs are supplied by the operating system.
+        if not (DEST / name).exists():
+            shutil.copy2(source, DEST / name)
+        pending.append(source)
 
 tcl = ctypes.CDLL(str(base / "DLLs" / "tcl86t.dll"))
 tcl.Tcl_CreateInterp.restype = ctypes.c_void_p
