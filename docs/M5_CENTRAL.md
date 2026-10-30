@@ -111,3 +111,15 @@ Development baseline: 89 tests passing. Central additions: 36 tests passing (125
 M6: multi-user login/RBAC. M7: authenticated endpoint agents. M8: production scheduler/distributed queues. Later: expanded controls, framework mapping, business risk register, policy parsing, evidence-cited AI governance, real VM accuracy experiments and load research. These are not presented as completed by M5.
 
 Clean-VM portability and formal control ground-truth accuracy testing remain separate validation work. The release is verified on this development machine.
+
+## Evidence consistency and visible failure states
+
+`GET /api/endpoints/{id}/verify` checks payload digest, summary counters,
+submission ID and collection time against the payload. History metrics derive
+from payload statuses; inconsistent records return `integrity_ok=false` and
+withhold score/coverage/risk. Any inconsistent endpoint history also withholds
+its latest/fleet score, preventing edited timestamps from hiding a bad record.
+The dashboard shows an integrity warning. The verifier does not authenticate
+endpoint/source attribution, detect deletion, or defeat coherent rewriting of
+payload, digest and metadata. An external trusted reference is required for
+those stronger claims. A changed reference alone does not prove an attack.

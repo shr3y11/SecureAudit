@@ -1,137 +1,157 @@
-# Research Paper — Outline and Evidence Map
+# Research paper — outline and evidence map
 
-**Working title:** *Honest Scores, Verifiable Evidence: Fixed-Baseline
-Interval Scoring and Measured Tamper-Evidence for a Windows Compliance
-Assessment Tool*
+**Working title:** *Evidence Completeness and Integrity Boundaries in
+SecureAudit: An Evaluated Audit-Reporting Prototype*
 
-**Status key:** ✅ evidence exists and is reproducible · 🔨 in progress ·
-⏳ waiting on the Windows VM captures · ✍️ writing only (no new evidence
-needed). No number enters this paper from anywhere except a committed,
-reproducible artifact.
+**Status:** prototype and reproducible computational evaluations available;
+Windows independent review, related-work survey and full manuscript pending.
+This outline is not a publication-ready paper. Reuse of worst-case bounds and
+three-valued decisions is not claimed as new mathematics.
 
-## Abstract (draft — ✍️, numbers ✅)
+## Abstract (draft)
 
-Compliance tools typically report a single score computed over whatever
-checks happened to run, overstating compliance when evidence is
-missing, and store results with integrity claims that are never
-tested. We present SecureAudit, which (1) scores assessments against a
-*fixed baseline*, reporting an interval and a three-valued decision
-(ABOVE / BELOW / UNRESOLVED) instead of a point score; (2) records
-evidence with hashes that are actually *recomputed* by a verification
-endpoint, and evaluates — under an explicit attacker model — which
-tamperings that detects and which it cannot; and (3) is evaluated
-end-to-end: an exhaustive finite-state study of the scoring rule, a
-seven-experiment tamper laboratory, and genuine Windows observations
-on a Server 2025 host under a pre-registered capture protocol. In the state-space study, a naive selected-checks score
-overstates the complete-baseline pass fraction by up to **80 percentage
-points**; the interval decision never does. In the tamper laboratory,
-internal hash verification detects naive modification but is defeated
-by hash reforging and deletion — both of which an external checkpoint
-detects, quantifying exactly where the integrity boundary lies.
+SecureAudit implements fixed-baseline interval reporting in its Windows desktop
+workflow and evidence-consistency verification in its separate Central service.
+For unobserved required checks, desktop reporting gives the minimum and maximum
+possible complete-baseline pass fractions under a binary outcome model. An
+exhaustive study covers 1,023 nonempty-selection evidence states and 7,744 binary
+completions, with zero classification mismatches under the model assumptions.
+A defined selected-check point-score rule can overstate the complete-baseline
+pass fraction by up to 80 percentage points in this state space; this is a
+constructed worst case, not an observed endpoint error rate. Seven controlled
+Central experiments examine modification, coherent rewriting, deletion, replay
+and bundle rewriting. Internal checks detect inconsistent records but not a
+coherent database rewrite or deletion. A protected external reference reveals
+changes to the committed set; it does not distinguish malicious changes from
+legitimate new evidence. Windows observations comprise 19 check readings from
+seven executions on one hosted Server 2025 machine. Independent review remains
+pending, and the legacy acquisition manifests do not verify the retained Git
+bytes. The contribution is an implemented reporting design and a reproducible
+evaluation of its scope and failure boundaries.
 
-## 1. Introduction ✍️
-- Problem: point scores hide missing evidence; integrity claims go untested.
-- Contributions C1–C3 mapped to §3, §4, §5. Scope honesty: a research
-  prototype; no certification claims (CIS/ISO/NIST), mappings partial.
+## 1. Research questions and contributions
 
-## 2. Background and related work ⏳/✍️
-- Compliance automation and scoring; interval/imprecise-probability
-  treatments of missing data; tamper-evident logging and its known
-  limits (a hash chain whose reference can be rewritten proves
-  little). [Survey to complete; cite primary sources only.]
+- RQ1: Does the implementation classify all states consistently with the
+  possible binary completions of its fixed baseline? Answered within the model.
+- RQ2: Which defined storage/export changes are visible to internal checks and
+  to a reference outside the writer's control? Answered for the listed cases.
+- RQ3: How do incomplete evidence and privilege limitations occur in actual
+  Windows collection? Only partially explored: no unelevated run or Error outcome
+  was captured. Frequencies and general collector accuracy remain unanswered.
 
-## 3. Fixed-baseline interval scoring ✅
-- Model: baseline of N required checks; states P/F/E/O; bounds
-  lower = P/N, upper = (P+E+O)/N as exact fractions; decision before
-  rounding against a fixed threshold; old scans without a baseline
-  context are never assigned one retroactively.
-- **Evaluation (finite-state study, `research/run_study.py`):**
-  - PFE space: 243 states, 21 count classes, 1,024 binary completions
-    checked against an independent oracle — **0 mismatches, 0
-    containment violations**.
-  - PFEO space (with omissions): 1,023 states, 55 count classes,
-    7,744 completions, 3,069 oracle classifications — **0 mismatches**.
-  - Resolution: 5,110 refinement edges, 0 nesting violations, 0
-    stable-decision reversals.
-  - Naive-score comparison: maximum overstatement **80.0 percentage
-    points** across the selection-truth pairs.
-  - All artifacts reproduce byte-for-byte (PR #23/#24); hashes in
-    `research/results/sha256.json`.
+Contribution: implement and evaluate a reporting design with explicit evidence
+completeness and integrity boundaries in SecureAudit. A general novelty claim
+requires a completed related-work comparison; an interval formula alone is
+insufficient.
 
-## 4. Evidence integrity, measured 🔨→✅ (Tamper Lab)
-- Design: canonical-JSON evidence + SHA-256 recorded at submission
-  (Central); submission IDs bound to first evidence (409 on altered
-  replay, idempotent on identical replay); a verification endpoint
-  that recomputes stored hashes; self-verifying export bundles;
-  owner-signed catalog (Ed25519, PR #19).
-- **Attacker model:** write access to Central's database file or an
-  exported bundle; no API token; collection-time honesty out of scope.
-- **Experiments (`research/tamper_lab.py`, results in
-  `research/results/tamper_lab_results.json`):**
+## 2. Background and related work — incomplete
 
-  | Attack | Internal verify | External checkpoint |
-  |---|---|---|
-  | Modify evidence, hash untouched | **detected** | detected |
-  | Modify + reforge hash | not detected | **detected** |
-  | Delete latest assessment | not detected | **detected** |
-  | Replay, identical submission | idempotent (0 rows added) | — |
-  | Replay, same ID altered content | rejected (409) | — |
-  | Replay, new ID same content | accepted (1 row) | **detected** (unexpected addition) |
-  | Forge bundle + manifest | bundle self-check: consistent | **detected** (manifest hash differs) |
+Review primary sources on partial identification/worst-case missing-data bounds
+(including Manski), three-valued logic (including Kleene), imprecise probability,
+compliance assessment semantics and tamper-evident logging. Verify every citation
+and DOI before submission. No OpenSCAP, Wazuh or CIS-CAT benchmark was executed;
+do not attribute the constructed comparator's behavior to those products.
 
-- Reading: recording hashes is not detection; recomputation catches
-  naive edits only; every stronger attack is caught exactly by the
-  reference the attacker cannot reach. This motivates the protected
-  checkpoint as future work (§7), stated as a requirement, not a claim.
+## 3. Desktop fixed-baseline semantics and finite-state validation
 
-## 5. Windows observations ✅ (hosted-runner execution; lab-VM replication ⏳)
-- Executed 2026-10-29 on a genuine Windows machine — **Windows
-  Server 2025 Datacenter (build 26100)**, a GitHub-hosted runner —
-  under the protocol in `docs/RESEARCH_VALIDATION.md`. Raw captures
-  are committed on the `data/windows-observations` branch; summary in
-  `research/windows_observations/README.md`.
-- Baseline (administrator, 3 repeats, identical): FW Pass, Defender
-  Pass, BitLocker Fail (volume fully decrypted), Guest Pass, SMB1
-  Pass — every reading agrees with the independently captured native
-  reference. Decision ABOVE, bounds [80, 80] at full coverage.
-- Configured cases behave as specified: firewall profile disabled →
-  WIN-FW-001 Fail; Guest enabled → WIN-GUEST-001 Fail; selective
-  one-check scan → 20% baseline coverage, UNRESOLVED, bounds
-  [20, 100] — the protocol's prediction, observed.
-- Finding: disabling Defender real-time monitoring does not change
-  WIN-DEF-001, whose objective is the narrower `AntivirusEnabled`
-  (true throughout, per the same capture's reference). The strict
-  `AntivirusEnabled = false` case was not achievable on this runner
-  and is reported not executed, as are the unelevated-user,
-  BitLocker-on, and SMB1-on cases — with reasons, never simulated.
-- Limits, stated in the paper: a hosted runner is not the lab VM;
-  Windows 11 and snapshot-based replication remain future work, and
-  the protocol's independent manual review of these captures is
-  still pending.
+For N required checks, P/F/E/O denote passes, failures, errors and omissions.
+The exact interval is [P/N, (P+E+O)/N]. ABOVE requires the lower bound to meet the
+threshold; BELOW requires the upper bound to fall below it; otherwise the result
+is UNRESOLVED. Correct P/F readings are assumed. The interval is a logical bound,
+not a confidence interval. The 60%, 80% and 100% thresholds are illustrative,
+not prescribed compliance criteria. Mandatory controls need separate decisions.
 
-## 6. Threats to validity ✍️ (all already documented in-repo)
-- Central's fleet score still uses the legacy point score; bounds are
-  a desktop (fixed-baseline) property today, and the paper must not
-  imply otherwise.
-- CIS mappings: 1 of 5 checks mapped (Partial); the rest are labelled
-  "Pending validation" — the tool does not certify compliance.
-- DPAPI protection is user-scoped; catalog signing is implemented but
-  awaits the owner's key ceremony.
-- GUI code coverage is the weakest measured area (app.py 15%;
-  overall 64%, CI-reported).
-- The tamper attacker model grants database write access; weaker
-  attackers are strictly easier to detect, stronger ones (collection
-  compromise) are out of scope.
+`research/run_study.py` and `research/results/` provide:
 
-## 7. Future work ✍️
-Protected checkpoint / trusted verifier for the evidence chain;
-per-endpoint baseline policy for Central; recurring real scans for
-drift measurement against baselines; the roadmap in
-`docs/PLATFORM_ROADMAP.md` (agents, plugins, RBAC) is platform work,
-explicitly not claimed as research.
+| Evaluation | Reproducible count/result |
+| --- | --- |
+| Full-selection PFE states | 243 states; 21 count classes; 1,024 completions |
+| PFEO states (excluding empty selection) | 1,023 states; 55 count classes |
+| PFEO completion/classification checks | 7,744 completions; 3,069 classifications; 0 mismatches |
+| Refinement edges | 5,110; 0 nesting violations or stable-decision reversals |
+| Defined selected-check score comparison | 992 truth/selection pairs; maximum overstatement 80 percentage points |
 
-## Reproducibility statement ✅
-One checkout reproduces every number in §3 and §4: the study script,
-the tamper laboratory, their committed results, and the test suites
-that pin them (`tests/test_research_reproducibility.py`,
-`tests/test_tamper_lab.py`) all run in CI on Windows and Linux.
+The completion routine is algorithmically separate but shares the model's
+assumptions. Enumeration validates implementation consistency; it does not
+establish prevalence, user benefit or a new theorem. The bounds contain all
+modeled complete pass fractions; decision labels themselves are not fractions.
+Historical desktop scans without baseline context retain that unknown status.
+Central still uses its separately documented point-score/coverage semantics.
+
+## 4. Central integrity evaluation
+
+Internal verification recomputes the evidence digest and checks reporting counts,
+submission ID and collection time against the stored payload. Inconsistent
+records withhold scores and carry visible integrity warnings. Endpoint/source
+attribution is outside this payload checksum's scope.
+
+Two separate capabilities are evaluated: database/bundle writer without an API
+token, and authenticated API submitter for replay experiments. Collection-time
+honesty and replacement of the trusted verifier/reference are out of scope.
+
+| Experiment | Internal/API outcome | Protected-reference comparison |
+| --- | --- | --- |
+| Modify evidence, leave digest untouched | Inconsistency detected | Changed |
+| Modify evidence, digest and counts coherently | Not detected | Changed |
+| Delete latest assessment | Not detected | Changed |
+| Identical submission ID and content | Idempotent; 0 rows added | Unchanged |
+| Same submission ID, changed content | Rejected (409) | Unchanged |
+| New submission ID, same check content | Accepted; 1 row added | Changed |
+| Rewrite saved bundle and its manifest | Bundle remains self-consistent | Saved original manifest digest differs |
+
+Negative controls (`tests/test_tamper_lab.py`) require an untouched instance to
+remain unchanged across repeated comparisons. A legitimate new submission also
+changes the reference; updating the trusted checkpoint resolves that difference.
+Fresh export timestamps are excluded from content comparison. Bundle forgery is
+compared against the exact saved original, not another timestamped export.
+
+This is a local experimental reference, not a deployed external attestation
+service. The seven cases are controlled examples, not detection-rate estimates.
+Owner catalog signing is implemented with a pinned release key and downgrade
+rejection; an owner key ceremony and signed release validation remain pending.
+
+## 5. Windows observations and preservation limits
+
+Run 40939421976 (2026-10-29): one GitHub-hosted Windows Server 2025 Datacenter
+host, build 26100. Baseline repeated three times: firewall/Defender/Guest/SMB1
+Pass, BitLocker Fail, interval [80,80] and ABOVE. Additional single executions:
+firewall disabled → Fail; Guest enabled → Fail; firewall-only selection →
+UNRESOLVED [20,100]; Defender real-time monitoring disabled → Pass because the
+collector checks the narrower AntivirusEnabled property, which remained true.
+
+There were seven executions and 19 check readings, not 19 independent hosts.
+The native references share Windows APIs with collectors; their agreement is
+corroboration, not independent ground truth. Manual review CSVs remain blank.
+No standard-user, BitLocker-on, SMB1-on or AntivirusEnabled=false case was run.
+No observed Error rate or privilege effect can be inferred from these captures.
+
+Pinned data commit: `b13c644999e933d24d183890a20b84e9c75701a5`, path
+`windows-observations/run-40939421976/`. Each of five original case manifests
+references a missing SQLite database and text changed by Git CRLF→LF conversion.
+The retained bytes remain readable; none of those acquisition manifests verify.
+`research/windows_observations/retained_inventory.json` records the derivative
+hashes, original hash comparisons and missing members without rewriting history.
+Future captures use verified byte-preserving ZIPs containing SQLite before Git
+normalization. A new Windows capture is still needed to demonstrate that complete
+acquisition path on an actual runner.
+
+## 6. Limits and submission gates
+
+The five-check catalog is small. Missing-evidence frequency, broader collector
+accuracy, assessor interpretation, weighted/dependent controls and comparisons
+with actual tools have not been evaluated. Existing tests do not establish
+production readiness. Historical coverage percentages are not current evidence;
+use the current CI report. The project does not certify ISO/CIS/NIST compliance.
+
+Before submission: complete the related-work survey and citation verification;
+obtain independent Windows review; collect a byte-preserved replication; align
+authorship and AI disclosure with the chosen venue. A student demonstration or
+poster is a reasonable target to discuss with faculty. Journal readiness is not
+established by this work.
+
+## Reproducibility
+
+Run `python research/run_study.py`, `python research/tamper_lab.py` and the tests.
+The study's substantive outputs reproduce byte-for-byte; environment metadata is
+separate. Tamper results are deterministic in meaning and pinned by regression
+tests. Windows captures are observations, not reproducible generated fixtures.

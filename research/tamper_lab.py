@@ -8,14 +8,15 @@ Attacker model
 --------------
 The attacker has **write access to Central's database file** (or an
 exported bundle) — e.g. a compromised host, a malicious insider with
-file access, or a stolen backup. The attacker does *not* have the API
-token and cannot make the application itself lie at collection time;
-endpoint-side collection integrity is a separate question.
+file access, or a stolen backup. Those experiments grant no API token.
+The replay experiments separately grant an authenticated API submitter.
+Neither model establishes endpoint collection-time honesty.
 
 Verifiers compared
 ------------------
 - **Internal**: Central's own `GET /api/endpoints/{id}/verify`, which
-  recomputes each stored evidence hash.
+  recomputes each stored evidence hash and checks reporting counts,
+  submission ID and collection time against the payload.
 - **Checkpoint**: an external record taken before the attack
   (per-submission hashes, assessment count, and the SHA-256 of an
   exported bundle's manifest). It models any reference kept outside
@@ -147,7 +148,7 @@ def run_experiments():
             db.execute("UPDATE central_assessments SET evidence_json = ?, sha256 = ?, passed = 0, failed = 2 WHERE id = ?",
                        (forged, hashlib.sha256(forged.encode()).hexdigest(), row_id))
     experiments.append({"attack": "modify_and_reforge_hash",
-                        "description": "Edit stored evidence AND recompute its recorded hash to match.",
+                        "description": "Edit evidence, recompute its hash AND update reporting counters coherently.",
                         **_verdict(lab)})
 
     lab = _fresh()
@@ -184,7 +185,7 @@ def run_experiments():
                         "description": "Submit identical evidence under a fresh submission ID.",
                         "api_status": response.status_code, "rows_added": 1,
                         **_verdict(lab),
-                        "note": "Accepted as a new submission; the checkpoint sees the unexpected addition and the duplicate content hash."})
+                        "note": "Accepted as a new submission; the checkpoint sees a changed evidence set, as it also does for legitimate additions; it does not classify intent."})
 
     lab = _fresh()
     # Forge the exact export whose original manifest digest was retained.

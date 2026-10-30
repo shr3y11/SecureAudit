@@ -82,8 +82,35 @@ its objective; the case name overpromises. Two honest consequences:
 
 ## Platform consequence
 
-All five collectors executed correctly on Windows Server 2025, which
+All five collectors returned structured readings on this Server 2025 host,
+consistent with the captured native references for the executed cases. This
+is limited execution evidence, pending independent review; Server 2025
 was not previously a listed platform. Following the project's rule —
 list a platform only where a check was actually observed —
 `Windows Server 2025` has been added to each check's
 `supported_platforms` in `checks/catalog.json`.
+
+## Preservation correction (30 October 2026)
+
+The acquisition manifests do **not** verify the retained data branch bytes.
+All five cases reference an absent `scans.db`; retained text was converted from
+CRLF to LF by Git. Reintroducing CRLF reproduces the original text hashes, but
+this explanation does not recover the missing databases or certify provenance.
+The original manifests are preserved unchanged on data commit
+`b13c644999e933d24d183890a20b84e9c75701a5`.
+
+`retained_inventory.json` is a derivative index of available bytes, including
+missing members and both hash comparisons. Recreate it from that pinned checkout:
+
+```text
+python tools/inventory_retained_captures.py PATH/windows-observations/run-40939421976 --source-commit b13c644999e933d24d183890a20b84e9c75701a5 --output retained_inventory.json
+```
+
+Future capture cases create a verified `*.capture.zip` before Git processing,
+including SQLite and exact file bytes. This does not retroactively repair this
+run. A new byte-preserved Windows replication remains pending.
+
+The run contains seven executions and 19 readings on one machine. No Error
+outcomes or genuine standard-user runs were observed; no field error rate or
+privilege effect is established. The native-reference agreement above is an
+artifact comparison, pending human independent review.

@@ -10,7 +10,7 @@
     },
     {
       "attack": "modify_and_reforge_hash",
-      "description": "Edit stored evidence AND recompute its recorded hash to match.",
+      "description": "Edit evidence, recompute its hash AND update reporting counters coherently.",
       "internal_verify": "not_detected",
       "checkpoint": "detected",
       "capability": "database/bundle writer; no API token"
@@ -49,7 +49,7 @@
       "rows_added": 1,
       "internal_verify": "not_detected",
       "checkpoint": "detected",
-      "note": "Accepted as a new submission; the checkpoint sees the unexpected addition and the duplicate content hash.",
+      "note": "Accepted as a new submission; the checkpoint sees a changed evidence set, as it also does for legitimate additions; it does not classify intent.",
       "capability": "authenticated API submitter"
     },
     {
