@@ -9,6 +9,11 @@ tags: [secureaudit, research, evidence]
 
 ## Hosted pilot follow-up
 
+Run 40999603644 has now completed successfully. Actual archived outputs support
+the counts in research/HOSTED_PILOT_RESULTS.md. All three repetitions matched
+within each condition/image. The blank independent-review records must remain
+blank until a reviewer completes them. Capture completion is not accuracy review.
+
 Use PR #8's Research reporting validation workflow. Retain both Windows pilot
 artifacts, the exact run/head SHA, and the generated observations CSV/JSON/Markdown.
 Compare full-admin versus full-standard within each runner image. The process

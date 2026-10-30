@@ -9,6 +9,14 @@ tags: [secureaudit, research, evidence, reporting]
 
 ## Hosted pilot follow-up (30 October 2026)
 
+Completed capture: run 40999603644 passed both Windows pilot and both software
+test jobs. The pilot produced 18 scans and 66 actual readings. Full elevated
+vectors were 4P/1F/0E; full standard vectors were 3P/0F/2E on both images in
+all three repetitions. File hashes and recorded before/after native fields
+were checked. Independent reviewer sheets remain pending. See
+research/HOSTED_PILOT_RESULTS.md for provenance and limits. These observations
+supersede earlier statements below that no hosted outputs were yet available.
+
 The initial code is published in draft PR https://github.com/shr3y11/SecureAudit/pull/8.
 This follow-up adds real hosted Windows collection, privilege/version metadata,
 and a strict observation summarizer. `tools/run_hosted_study.ps1` requires a
