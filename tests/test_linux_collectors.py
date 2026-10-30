@@ -65,3 +65,21 @@ def test_runner_rejects_unknown_ids():
         capture_output=True, text=True, timeout=30,
     )
     assert process.returncode == 2
+
+
+@pytest.mark.parametrize("output,exit_code,expected", [
+    ("Status: active", 0, "Pass"),
+    ("Status: inactive", 0, "Fail"),
+    ("permission denied", 1, "Error"),
+    ("Status: active", 1, "Error"),
+    ("unexpected output", 0, "Error"),
+])
+def test_firewall_ufw_semantics(tmp_path, monkeypatch, output, exit_code, expected):
+    stub = tmp_path / "ufw"
+    stub.write_text(f"#!/bin/sh\nprintf '%s\\n' '{output}'\nexit {exit_code}\n")
+    stub.chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ["PATH"])
+    process = subprocess.run(["bash", str(SCRIPTS / "firewall.sh")], capture_output=True, text=True)
+    result = json.loads(process.stdout)
+    assert result["status"] == expected
+    assert bool(result["error_message"]) == (expected == "Error")
