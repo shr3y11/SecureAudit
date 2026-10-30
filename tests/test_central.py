@@ -211,7 +211,9 @@ def test_verify_endpoint_detects_evidence_tampering(client, endpoint, tmp_path):
 
     assert client.post(f"/api/endpoints/{endpoint}/evidence", json=payload()).status_code == 200
     clean = client.get(f"/api/endpoints/{endpoint}/verify").json()
-    assert clean == {"endpoint_id": endpoint, "checked": 1, "mismatches": [], "ok": True}
+    assert all(clean[key] == value for key, value in
+               {"endpoint_id": endpoint, "checked": 1, "mismatches": [], "ok": True}.items())
+    assert clean["details"] == []
     assert client.get("/api/endpoints/does-not-exist/verify").status_code == 404
 
     # Attacker with database write access edits the stored evidence but
@@ -230,7 +232,7 @@ def test_verify_endpoint_detects_evidence_tampering(client, endpoint, tmp_path):
         rows = db.execute("SELECT id, evidence_json FROM central_assessments").fetchall()
         for row_id, evidence_json in rows:
             import hashlib
-            db.execute("UPDATE central_assessments SET sha256 = ? WHERE id = ?",
+            db.execute("UPDATE central_assessments SET sha256 = ?, passed = 0, failed = 2 WHERE id = ?",
                        (hashlib.sha256(evidence_json.encode()).hexdigest(), row_id))
     reforged = client.get(f"/api/endpoints/{endpoint}/verify").json()
     assert reforged["ok"] is True, "reforged hashes are the documented blind spot of internal verification"

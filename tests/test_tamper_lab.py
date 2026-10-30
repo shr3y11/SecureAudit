@@ -53,6 +53,28 @@ def test_legitimate_new_evidence_changes_checkpoint_but_is_not_tampering(tmp_pat
         lab.client.__exit__(None, None, None)
 
 
+@pytest.mark.parametrize("assignment,issue", [
+    ("passed=3, failed=0, errors=0", "summary_counts"),
+    ("submission_id='relabelled'", "submission_id"),
+    ("collected_at='2020-01-01T00:00:00+00:00'", "collected_at"),
+])
+def test_report_metadata_tampering_is_detected_and_score_withheld(tmp_path, assignment, issue):
+    lab = Lab(tmp_path)
+    try:
+        lab.sql(f"UPDATE central_assessments SET {assignment} WHERE submission_id='lab-2'")
+        verify = lab.client.get(f"/api/endpoints/{lab.endpoint_id}/verify").json()
+        assert not verify["ok"]
+        assert issue in verify["details"][0]["issues"]
+        history = lab.client.get(f"/api/endpoints/{lab.endpoint_id}/history").json()
+        altered = next(a for a in history if not a["integrity_ok"])
+        assert altered["score"] is None
+        assert altered["passed"] == 1  # derived from evidence, not forged columns
+        summary = lab.client.get("/api/summary").json()
+        assert summary["score"] is None and not summary["integrity_ok"]
+    finally:
+        lab.client.__exit__(None, None, None)
+
+
 def test_naive_modification_is_detected_internally(results):
     assert results["modify_evidence"]["internal_verify"] == "detected"
 
