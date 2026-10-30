@@ -7,6 +7,7 @@ import shutil
 import sys
 import urllib.request
 import zipfile
+import runpy
 from packaging.requirements import Requirement
 
 if os.name != "nt" or sys.version_info[:2] != (3, 12):
@@ -14,7 +15,8 @@ if os.name != "nt" or sys.version_info[:2] != (3, 12):
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = ROOT / ".tools"
-DEST = ROOT / "dist" / "SecureAudit-M5"
+VERSION = runpy.run_path(str(ROOT / "secureaudit_central" / "__init__.py"))["__version__"]
+DEST = ROOT / "dist" / f"SecureAudit-v{VERSION}"
 TOOLS.mkdir(exist_ok=True)
 DEST.mkdir(parents=True, exist_ok=True)
 
@@ -57,7 +59,7 @@ def copy_distribution(name):
         if requirement.marker is None or requirement.marker.evaluate({"extra": ""}):
             copy_distribution(requirement.name)
 
-for name in ("fastapi", "uvicorn", "sqlalchemy", "psycopg", "psycopg-binary"):
+for name in ("fastapi", "uvicorn", "sqlalchemy", "psycopg", "psycopg-binary", "cryptography"):
     copy_distribution(name)
 
 # Official embedded Python excludes Tk. Pair the development runtime's Tcl
@@ -91,14 +93,14 @@ for project, destination in (("tcl", "_tcl_data"), ("tk", "_tk_data")):
     shutil.copy2(source_dir / "license.terms", DEST / f"{project}-license.terms")
 
 (DEST / "START-HERE.txt").write_text(
-    "SecureAudit Central 0.5.0 (M5)\n\n"
+    f"SecureAudit Central {VERSION}\n\n"
     "Double-click SecureAuditCentral.exe. Keep the entire folder together.\n"
     "The desktop launcher opens a local browser dashboard. No Python install is needed.\n"
     "For privileged Windows checks: right-click SecureAuditCentral.exe and select Run as administrator.\n"
     "Local data: %LOCALAPPDATA%\\SecureAuditCentral.\n"
     "The official Python runtime launcher is digitally signed by the Python Software Foundation.\n"
     "SecureAudit application source is bundled separately and is not code-signed.\n"
-    "This is a central backend milestone, with 100 synthetic demo endpoints and real local scans.\n"
+    "Demo endpoints are synthetic fixtures; Scan this PC performs real local scans.\n"
     "Remote endpoint agents, enterprise RBAC, and AI governance are later milestones.\n",
     encoding="utf-8")
 print(f"Portable distribution built: {DEST}")

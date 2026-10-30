@@ -9,5 +9,5 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Portable central executable build failed.' }
     & $taskPython tools\package_release.py
     if ($LASTEXITCODE -ne 0) { throw 'Release ZIP verification failed.' }
-    Write-Host 'Built dist\SecureAudit-M5\SecureAuditCentral.exe. Keep its folder together. Final commit requires user approval.'
+    Write-Host 'Built the versioned portable folder and ZIP under dist. Keep the folder together; see docs/RELEASE_GUIDE.md.'
 } finally { Pop-Location }

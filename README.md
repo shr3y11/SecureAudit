@@ -1,245 +1,107 @@
-﻿# SecureAudit
+# SecureAudit
 
-## Milestone 5 — SecureAudit Central 0.5.0
+Windows security configuration assessment and local audit-evidence reporting.
 
-The new central backend reuses the existing scanner and scoring engine. It adds FastAPI, PostgreSQL support, a standalone SQLite mode, a browser dashboard, endpoint inventory, timestamped evidence history, SHA-256 hashes, CSV/JSON export, and a persistent demo assessment queue.
+## v0.6.0-beta release candidate
 
-The original desktop application below remains available through `app.py`. The new entry point is `launcher.py`.
+This candidate combines the Central dashboard with the local scanner, evidence-integrity checks, and research reporting work committed after v0.5.0-beta. It remains a beta application. The source and Windows package are prepared by the **Windows release candidate** workflow. Download its artifacts from [Actions](https://github.com/shr3y11/SecureAudit/actions); published versions appear under [Releases](https://github.com/shr3y11/SecureAudit/releases).
 
-**Windows release:** extract the complete `SecureAudit-M5-Windows.zip` folder and double-click `SecureAudit-M5\SecureAuditCentral.exe`. Keep all files together. The portable distribution includes an unmodified Python Software Foundation signed interpreter; SecureAudit source itself is not code-signed. No Python installation is required. Windows Application Control blocked the unsigned PyInstaller one-file build on this development machine, so the verified release uses the portable folder.
+### Windows quick start
 
-**Demo:** Create demo fleet → Assess demo fleet → Overview → inspect endpoint evidence → export JSON/CSV. Demo endpoints are synthetic fixtures; they are never represented as real devices. **Scan this PC** runs the five existing approved PowerShell modules against the current computer. Run the executable as Administrator when privileged checks are required.
+1. Download `SecureAudit-v0.6.0-beta-Windows-x64.zip`.
+2. Extract the entire ZIP to a writable folder.
+3. Open `SecureAudit-v0.6.0-beta` and launch `SecureAuditCentral.exe`.
+4. Keep the launcher open while using the browser dashboard.
+5. Use **Scan this PC** to run the five approved checks on this computer. Use **Run as administrator** when elevated collection is needed.
 
-See [M5 setup and demonstration](docs/M5_CENTRAL.md) for PostgreSQL configuration, architecture, build instructions, test evidence, and scope limits. Multi-user RBAC, remote agents, policy ingestion, and AI governance remain later milestones.
+Keep every file in the extracted folder together. The portable package includes Python and dependencies; no separate Python installation is needed. It uses the original Python interpreter executable renamed as the launcher. A vendor signature on that interpreter does not sign SecureAudit's bundled application code. The build records the interpreter's signature status.
 
-![SecureAudit Central dashboard running from the Windows release](docs/demo/dashboard.jpg)
+Read the [release guide](docs/RELEASE_GUIDE.md) before upgrading and the [release notes](RELEASE_NOTES.md) for scope and limitations.
 
-SecureAudit is a local Windows technical compliance-assessment tool that runs a predefined set of approved PowerShell checks, collects structured evidence, calculates an assessment score and coverage, stores scan history in SQLite, and generates local HTML reports.
+![SecureAudit Central dashboard](docs/demo/dashboard.jpg)
 
-SecureAudit V1 is designed as a **standalone Windows desktop MVP**. It performs automated point-in-time technical configuration assessments for selected Windows baseline checks. It does **not** certify complete compliance with CIS Controls, CIS Benchmarks, ISO 27001, NIST CSF, or any other framework.
+## What is implemented
 
-## Current MVP Capabilities
+| Component | Capability |
+| --- | --- |
+| Windows scanner | Approved PowerShell modules for Firewall, Defender, OS-drive BitLocker, built-in Guest account and SMBv1 |
+| Local desktop | Tkinter checklist, selected-only execution, administrator elevation, SQLite history and standalone HTML reports |
+| Central dashboard | Local FastAPI service, endpoint inventory, evidence history, trends, JSON/CSV export and browser printing |
+| Evidence ingestion | Strict input schema and duplicate-submission handling; imported evidence is labelled as imported |
+| Integrity checks | Payload digest and metadata consistency checks; detected inconsistencies withhold affected scores |
+| Demo mode | Synthetic fleet and persistent assessment queue, explicitly separated from real local scans |
+| Storage | Local SQLite by default; optional externally provisioned PostgreSQL |
+| Research extension | Fixed-baseline coverage, complete-pass-fraction bounds and threshold stability in the local desktop HTML workflow |
 
-- Standalone Windows `SecureAudit.exe`
-- Windows UAC administrator elevation
-- Tkinter desktop interface
-- Catalog-driven approved checklist
-- Five initial Windows checks:
-  - `WIN-FW-001` — Windows Firewall
-  - `WIN-DEF-001` — Microsoft Defender
-  - `WIN-BL-001` — BitLocker
-  - `WIN-GUEST-001` — Built-in Guest account
-  - `WIN-SMB1-001` — SMBv1
-- Allow-listed PowerShell execution
-- Structured JSON result contract
-- `Pass`, `Fail`, and `Error` result model
-- Compliance score and assessment coverage
-- SQLite scan history
-- Standalone HTML reports
-- PyInstaller one-file packaging
-- Persistent packaged data under `%LOCALAPPDATA%\SecureAudit`
-- Automated test suite covering the scanner, scoring, database, reporting, desktop workflow and Central API
+The portable Central launcher and the original desktop are different entry points. Central is started with `launcher.py`; the original checklist/HTML workflow uses `app.py` from the source distribution. The local HTML research display is not presented as a new Central dashboard feature.
 
-## Application Workflow
+Registering an endpoint does not install an agent or scan that remote machine. Central imports evidence and scans the executing PC; remote agents and multi-user RBAC are not implemented.
 
-```text
-Launch SecureAudit.exe
-        ↓
-Windows UAC elevation
-        ↓
-Tkinter GUI
-        ↓
-Load approved catalog
-        ↓
-Administrator selects checks
-        ↓
-Run only allow-listed PowerShell modules
-        ↓
-Collect structured JSON evidence
-        ↓
-Normalize Pass / Fail / Error
-        ↓
-Calculate score + coverage
-        ↓
-Store scan in SQLite
-        ↓
-Generate HTML report
-```
-
-## Security Model
-
-SecureAudit does not accept arbitrary PowerShell commands or arbitrary script paths.
-
-Allowed:
-
-```text
-User selects WIN-FW-001
-        ↓
-Trusted catalog resolves firewall.ps1
-        ↓
-Scanner validates approved path
-        ↓
-Approved script executes
-```
-
-Disallowed:
-
-```text
-User enters arbitrary PowerShell
-        ↓
-Application executes it as Administrator
-```
-
-The scanner also enforces path-containment checks, `.ps1` restrictions, timeouts, JSON parsing, check-ID validation, and controlled error handling.
-
-## Result Semantics
+## Results and interpretation
 
 | Status | Meaning |
-|---|---|
-| `Pass` | The check completed and the observed state met the expected condition. |
-| `Fail` | The check completed and the observed state did not meet the expected condition. |
-| `Error` | A reliable assessment could not be completed. |
+| --- | --- |
+| Pass | The observed state meets that check's exact objective |
+| Fail | The observed state does not meet that objective |
+| Error | The collector could not reliably determine the state |
 
-`Error` is deliberately not treated as `Fail`.
+Assessed pass rate is `Pass / (Pass + Fail)`. Selected coverage is `(Pass + Fail) / selected`. The pass rate is unavailable when no check is assessed. Errors remain visible and reduce coverage.
 
-## Scoring
+The local research report also retains the approved baseline. With P passes, E errors, O omitted required checks and N baseline checks, the possible complete pass fraction ranges from `P/N` to `(P+E+O)/N`. These are logical bounds assuming correct Pass/Fail readings. The default 80% threshold is illustrative, not a framework requirement. Mandatory controls require separate review.
 
-```text
-Assessed checks = Passed + Failed
+## Run from source
 
-Compliance score =
-Passed / Assessed × 100
-
-Assessment coverage =
-Assessed / Selected × 100
-```
-
-Errored checks reduce coverage but are excluded from the compliance-score denominator.
-
-## Running From Source
-
-Requirements:
-
-- Windows
-- Python 3.11+
-- PowerShell
-- project virtual environment
-
-Example:
+Use Python 3.12 on Windows x64 for development and release builds, and Windows PowerShell for real collection.
 
 ```powershell
-cd "C:\Users\wale1\Projects\SecureAudit"
-.\.venv\Scripts\Activate.ps1
-python .\app.py
+git clone https://github.com/shr3y11/SecureAudit.git
+cd SecureAudit
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe launcher.py
 ```
 
-SecureAudit will request Windows administrator elevation when required.
+For the original desktop, run `app.py` instead. For the exact release candidate, check out its commit or release tag before installation.
 
-## Running Automated Tests
+## Data and upgrades
+
+Central defaults to `%LOCALAPPDATA%\SecureAuditCentral`; the packaged original desktop uses `%LOCALAPPDATA%\SecureAudit`. Close the old application and back up both applicable directories before upgrading. Do not overwrite or ship a user's evidence database with the release files.
+
+Central's Windows access key is stored using current-user DPAPI protection. Another process running as the same user can still access it; it is not portable to another Windows user or machine. Do not share the key. PostgreSQL is optional and is not installed by the ZIP.
+
+## Security boundaries
+
+Scanner commands come only from the approved catalog. Script containment, check IDs, JSON results and execution timeouts are validated. The Central service binds to loopback and requires an access key for protected API routes.
+
+Hashes and consistency checks detect specified inconsistencies; they do not authenticate all imported evidence or defeat coherent rewriting by a privileged attacker. SecureAudit is a point-in-time technical assessment tool, not a certification of CIS, ISO 27001 or NIST compliance.
+
+## Tests and release builds
 
 ```powershell
-python -m pytest -v
+.\.venv\Scripts\python.exe -m pytest -q
+.\build-central.ps1
 ```
 
-The full suite is expected to pass on Windows. A small number of tests
-exercise real PowerShell execution and are skipped where `powershell.exe`
-is unavailable. (A fixed pass count is deliberately not recorded here:
-it went stale as the suite grew.)
+The Windows release workflow runs the test suite, builds the portable folder, and runs a self-test through the packaged launcher. Its verification files report actual results. PostgreSQL integration runs separately in CI. A successful packaged self-test verifies startup and the tested demo/API paths; it does not establish collector accuracy or clean-machine compatibility on every Windows edition.
 
-A recurring Windows pytest temporary-directory cleanup warning may appear after the successful result. It occurs during pytest exit cleanup and has not invalidated the completed test suite.
+The release output is:
+- `SecureAudit-v0.6.0-beta-Windows-x64.zip`
+- `SecureAudit-v0.6.0-beta-Windows-x64.zip.sha256`
+- a source ZIP, release notes, and build-verification records.
 
-## Building the Windows Executable
+## Research status
 
-```powershell
-.\build.bat
-```
+The [hosted pilot](research/HOSTED_PILOT_RESULTS.md) records actual observations from two hosted Windows Server images. Native reference capture shares APIs with the collectors, and independent manual review remains pending. Repeated scans are not independent endpoints. Windows Home/Pro accuracy, enterprise prevalence and assessor usability have not been established.
 
-Output:
-
-```text
-dist\SecureAudit.exe
-```
-
-The build uses the tracked `SecureAudit.spec` file and PyInstaller.
-
-Packaged resources:
-
-```text
-checks\catalog.json
-checks\powershell\firewall.ps1
-checks\powershell\defender.ps1
-checks\powershell\bitlocker.ps1
-checks\powershell\guest_account.ps1
-checks\powershell\smbv1.ps1
-```
-
-Generated `build/` and `dist/` artifacts are not committed.
-
-## Packaged Runtime Storage
-
-When running from source:
-
-```text
-data\secureaudit.db
-reports\
-```
-
-When running as the packaged executable:
-
-```text
-%LOCALAPPDATA%\SecureAudit\data\secureaudit.db
-%LOCALAPPDATA%\SecureAudit\reports\
-```
-
-Bundled scanner resources remain separate from writable evidence storage.
+The empirical paper direction investigates evidence collection under different privileges and scan scopes. LLM crosswalking is not a release feature.
 
 ## Documentation
 
-Detailed project documentation is available under [`docs/`](docs/):
+- [Release guide](docs/RELEASE_GUIDE.md)
+- [Central architecture and configuration](docs/M5_CENTRAL.md) (historical milestone guide)
+- [Scanner design](docs/SCANNER_DESIGN.md)
+- [Security model](docs/SECURITY_MODEL.md)
+- [Research reproduction](research/README.md)
+- [Windows validation protocol](docs/RESEARCH_VALIDATION.md)
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Scanner Design](docs/SCANNER_DESIGN.md)
-- [Scoring Model](docs/SCORING_MODEL.md)
-- [Database and Evidence](docs/DATABASE_AND_EVIDENCE.md)
-- [Security Model](docs/SECURITY_MODEL.md)
-- [GRC Control Mapping](docs/GRC_CONTROL_MAPPING.md)
-- [Build EXE Guide](docs/BUILD_EXE_GUIDE.md)
-- [VM Testing Guide](docs/VM_TESTING_GUIDE.md)
-- [Git Workflow](docs/GIT_WORKFLOW.md)
-- [Project Walkthrough](docs/PROJECT_WALKTHROUGH.md)
-
-## Current Limitations
-
-SecureAudit V1 currently does not provide:
-
-- centralized multi-endpoint orchestration
-- remote agent management
-- code signing
-- MSI installer
-- enterprise authentication or RBAC
-- continuous monitoring
-- complete CIS Benchmark coverage
-- complete CIS Controls validation
-- ISO 27001 certification assessment
-- NIST CSF compliance certification
-- tamper-proof evidence storage
-
-Clean Windows VM portability testing is planned but was deferred during the current MVP completion cycle.
-
-## Project Status
-
-The local Windows MVP pipeline is complete on the development machine:
-
-```text
-Select → Scan → Collect → Assess → Score → Store → Report
-```
-
-The next major architectural phase is a future centralized version using reusable core logic behind FastAPI and endpoint agents.
-
-## Research reporting extension
-
-The `codex/evidence-completeness` feature adds fixed-baseline coverage, possible
-complete pass-fraction bounds, and an aggregate threshold decision to new local
-HTML reports. It snapshots catalog membership in SQLite and preserves the
-existing pass rate and selected-check coverage. See [research reproduction](research/README.md)
-and the [Windows validation protocol](docs/RESEARCH_VALIDATION.md).
+The versioned release notes and current README take precedence over old milestone version strings. Uncommitted advanced-platform work is excluded from this candidate.
