@@ -87,3 +87,32 @@ def test_wrong_public_key_is_rejected(checks_dir, keypair):
     (checks_dir / "catalog.pub.pem").write_bytes(other)
     with pytest.raises(CatalogIntegrityError, match="does not verify"):
         verify_catalog_directory(checks_dir)
+
+
+def test_required_policy_rejects_unsigned_catalog(checks_dir):
+    with pytest.raises(CatalogIntegrityError, match="required"):
+        verify_catalog_directory(checks_dir, require_signed=True)
+
+
+def test_pinned_policy_rejects_signature_removal(checks_dir, keypair):
+    import hashlib
+    _sign(checks_dir, *keypair)
+    pin = hashlib.sha256(keypair[1]).hexdigest()
+    assert verify_catalog_directory(checks_dir, trusted_public_key_sha256=pin) == "verified"
+    (checks_dir / "catalog.pub.pem").unlink()
+    (checks_dir / "catalog.sig.json").unlink()
+    (checks_dir / "powershell/firewall.ps1").write_text("# replaced")
+    with pytest.raises(CatalogIntegrityError, match="required"):
+        verify_catalog_directory(checks_dir, trusted_public_key_sha256=pin)
+
+
+def test_pinned_policy_rejects_attacker_key_and_signature(checks_dir, keypair):
+    import hashlib
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, PublicFormat, NoEncryption
+    pin = hashlib.sha256(keypair[1]).hexdigest()
+    other = Ed25519PrivateKey.generate()
+    _sign(checks_dir, other.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()),
+          other.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo))
+    with pytest.raises(CatalogIntegrityError, match="fingerprint"):
+        verify_catalog_directory(checks_dir, trusted_public_key_sha256=pin)

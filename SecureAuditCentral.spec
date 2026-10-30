@@ -1,6 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 from pathlib import Path
+from core.catalog_sig import verify_catalog_directory
+from core.catalog_trust import PUBLIC_KEY_SHA256
+verify_catalog_directory(Path('checks'), require_signed=True, trusted_public_key_sha256=PUBLIC_KEY_SHA256)
 
 tk_fallback = []
 for folder, destination in [('tcl-core-8-6-12', '_tcl_data'), ('tk-core-8-6-12', '_tk_data')]:

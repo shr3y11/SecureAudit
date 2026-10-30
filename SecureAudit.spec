@@ -1,11 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 
+from pathlib import Path
+from core.catalog_sig import verify_catalog_directory
+from core.catalog_trust import PUBLIC_KEY_SHA256
+verify_catalog_directory(Path('checks'), require_signed=True, trusted_public_key_sha256=PUBLIC_KEY_SHA256)
+signature_data = [(str(Path('checks') / name), 'checks') for name in ('catalog.pub.pem', 'catalog.sig.json')]
+
 a = Analysis(
     ['app.py'],
     pathex=[],
     binaries=[],
-    datas=[('checks\\catalog.json', 'checks'), ('checks\\powershell\\firewall.ps1', 'checks\\powershell'), ('checks\\powershell\\defender.ps1', 'checks\\powershell'), ('checks\\powershell\\bitlocker.ps1', 'checks\\powershell'), ('checks\\powershell\\guest_account.ps1', 'checks\\powershell'), ('checks\\powershell\\smbv1.ps1', 'checks\\powershell')],
+    datas=signature_data + [('checks\\catalog.json', 'checks'), ('checks\\powershell\\firewall.ps1', 'checks\\powershell'), ('checks\\powershell\\defender.ps1', 'checks\\powershell'), ('checks\\powershell\\bitlocker.ps1', 'checks\\powershell'), ('checks\\powershell\\guest_account.ps1', 'checks\\powershell'), ('checks\\powershell\\smbv1.ps1', 'checks\\powershell')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

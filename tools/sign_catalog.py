@@ -12,13 +12,15 @@ Run this on the owner's machine, never in CI with a committed key:
   # 2. After every catalog or collector-script change — re-sign:
   python tools/sign_catalog.py sign --private-key C:\\Keys\\secureaudit-catalog.key
 
-  #    This writes checks/catalog.sig.json. Commit it together with the
-  #    catalog change it covers.
+  #    This writes checks/catalog.sig.json and core/catalog_trust.py. Commit
+  #    both together with the catalog change it covers.
 
-The application verifies the signature at catalog load when both
-catalog.pub.pem and catalog.sig.json are present.
+Frozen releases require a pinned signature at build and runtime. Unsigned
+source checkouts remain development-only; SECUREAUDIT_REQUIRE_SIGNED_CATALOG=1
+also enables the strict policy there. Keep the verifier code trusted.
 """
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -26,7 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from core.catalog_sig import build_manifest, sign_manifest  # noqa: E402
+from core.catalog_sig import build_manifest, sign_manifest, verify_signed_manifest  # noqa: E402
 
 CHECKS = ROOT / "checks"
 
@@ -67,8 +69,14 @@ def main() -> int:
     private_pem = args.private_key.read_bytes()
     manifest = build_manifest((CHECKS / "catalog.json").read_bytes(), _scripts())
     signed = sign_manifest(manifest, private_pem)
+    public_bytes = (CHECKS / "catalog.pub.pem").read_bytes()
+    verify_signed_manifest(signed, public_bytes)
     signature_path = CHECKS / "catalog.sig.json"
     signature_path.write_text(json.dumps(signed, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    fingerprint = hashlib.sha256(public_bytes).hexdigest()
+    (ROOT / "core/catalog_trust.py").write_text(
+        '"""Owner public-key trust anchor; regenerate only for an approved key rotation."""\n'
+        f'PUBLIC_KEY_SHA256 = {fingerprint!r}\n', encoding="utf-8")
     print(f"Wrote {signature_path} covering catalog.json and {len(manifest['scripts'])} collector scripts.")
     return 0
 
