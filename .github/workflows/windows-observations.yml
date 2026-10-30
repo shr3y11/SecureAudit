@@ -122,6 +122,17 @@ jobs:
             "CASE NOT EXECUTED: $($_.Exception.Message)" | Tee-Object captures/defender-prep.txt
           }
 
+      - name: Verify byte-preserving capture archives
+        if: always()
+        shell: powershell
+        run: |
+          $archives = @(Get-ChildItem captures -Filter *.capture.zip)
+          if ($archives.Count -eq 0) { throw "No complete capture archives were produced" }
+          foreach ($archive in $archives) {
+            python tools/capture_archive.py $archive.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Capture archive verification failed" }
+          }
+
       - name: Publish captures to data branch
         if: always()
         shell: bash
