@@ -23,11 +23,13 @@ function renderStats(summary) {
   $('nav-count').textContent = summary.endpoint_count;
   $('source-stat').textContent = `${summary.simulated_count} simulated · ${summary.endpoint_count-summary.simulated_count} registered`;
   $('score').textContent = pct(summary.score); $('coverage').textContent = pct(summary.coverage);
-  $('risk').textContent = summary.at_risk_endpoints; $('risk-stat').textContent = `${summary.assessed_endpoints} endpoints have evidence`;
-  $('passed').textContent = summary.passed; $('failed').textContent = summary.failed; $('errors').textContent = summary.errors;
+  const invalid = summary.integrity_ok === false;
+  $('risk').textContent = invalid ? '—' : summary.at_risk_endpoints;
+  $('risk-stat').textContent = invalid ? 'Evidence integrity failed; scores withheld.' : `${summary.assessed_endpoints} endpoints have evidence`;
+  $('passed').textContent = invalid ? '—' : summary.passed; $('failed').textContent = invalid ? '—' : summary.failed; $('errors').textContent = invalid ? '—' : summary.errors;
   $('db-type').textContent = summary.database === 'postgresql' ? 'PostgreSQL' : 'SQLite · local';
-  const total = summary.passed + summary.failed + summary.errors, circumference = 2 * Math.PI * 75;
-  $('ring-total').textContent = total;
+  const total = invalid ? 0 : summary.passed + summary.failed + summary.errors, circumference = 2 * Math.PI * 75;
+  $('ring-total').textContent = invalid ? '—' : total;
   let offset = 0;
   for (const [id, count] of [['ring-pass',summary.passed],['ring-fail',summary.failed],['ring-error',summary.errors]]) {
     const length = total ? count / total * circumference : 0;
@@ -42,8 +44,8 @@ function renderEndpoints() {
   const filtered = endpoints.filter(e => `${e.hostname} ${e.group_name}`.toLowerCase().includes(term) && (source === 'all' || (source === 'demo' ? e.simulated : !e.simulated)) && (posture === 'all' || (posture === 'pending' ? !e.latest : posture === 'failed' ? e.latest?.failed > 0 : e.latest?.errors > 0)));
   $('inventory-count').textContent = endpoints.length; $('visible-count').textContent = `${filtered.length} of ${endpoints.length} endpoints`;
   $('endpoint-rows').innerHTML = filtered.length ? filtered.map(e => {
-    const a = e.latest, findings = a ? `${a.failed} fail · ${a.errors} error` : 'Awaiting evidence';
-    return `<tr><td><button data-endpoint="${esc(e.id)}">${esc(e.hostname)}</button></td><td>${esc(e.group_name)}</td><td><span class="source-tag ${e.simulated?'demo':''}">${e.simulated?'Simulated':a?.source==='local-scanner'?'Local scanner':'Registered'}</span></td><td class="${a?.failed?'score-bad':'score-good'}">${pct(a?.score)}</td><td>${pct(a?.coverage)}</td><td>${findings}</td><td>${date(a?.collected_at)}</td><td><button data-endpoint="${esc(e.id)}">Inspect ↗</button></td></tr>`;
+    const a = e.latest, findings = a?.integrity_ok === false ? 'Integrity check failed' : a ? `${a.failed} fail · ${a.errors} error` : 'Awaiting evidence';
+    return `<tr><td><button data-endpoint="${esc(e.id)}">${esc(e.hostname)}</button></td><td>${esc(e.group_name)}</td><td><span class="source-tag ${e.simulated?'demo':''}">${e.simulated?'Simulated':a?.source==='local-scanner'?'Local scanner':'Registered'}</span></td><td class="${a?.integrity_ok === false || a?.failed?'score-bad':'score-good'}">${pct(a?.score)}</td><td>${pct(a?.coverage)}</td><td>${findings}</td><td>${date(a?.collected_at)}</td><td><button data-endpoint="${esc(e.id)}">Inspect ↗</button></td></tr>`;
   }).join('') : '<tr><td colspan="8" class="empty"><strong>No endpoints in this view.</strong>Create the demo fleet, scan this PC, or register an endpoint to import evidence.</td></tr>';
 }
 function renderJobs() {
@@ -108,7 +110,8 @@ function trendChart(assessments) {
   </svg></div>`;
 }
 function showAssessment(assessment) {
-  $('assessment-body').innerHTML = `<p>Collected ${date(assessment.collected_at)} · Score ${pct(assessment.score)} · Coverage ${pct(assessment.coverage)} · Source: ${esc(assessment.source)}</p><p class="hash">SHA-256: ${esc(assessment.sha256)}</p>${assessment.checks.map(c=>`<article class="evidence-check"><h3><span>${esc(c.check_id)} · ${esc(c.title)}</span><span class="status ${esc(c.status)}">${esc(c.status)}</span></h3><pre>${esc(c.detail)}</pre></article>`).join('')}`;
+  const warning = assessment.integrity_ok === false ? '<p class="error-text">Integrity check failed. Scores are withheld; the readings below are unverified.</p>' : '';
+  $('assessment-body').innerHTML = `${warning}<p>Collected ${date(assessment.collected_at)} · Score ${pct(assessment.score)} · Coverage ${pct(assessment.coverage)} · Source: ${esc(assessment.source)}</p><p class="hash">SHA-256: ${esc(assessment.sha256)}</p>${assessment.checks.map(c=>`<article class="evidence-check"><h3><span>${esc(c.check_id)} · ${esc(c.title)}</span><span class="status ${esc(c.status)}">${esc(c.status)}</span></h3><pre>${esc(c.detail)}</pre></article>`).join('')}`;
 }
 async function inspect(id) {
   activeEndpoint = endpoints.find(e=>e.id===id);
