@@ -1,0 +1,372 @@
+{
+  "kind": "derivative inventory of retained Git bytes; not original acquisition verification",
+  "source_commit": "b13c644999e933d24d183890a20b84e9c75701a5",
+  "source_path": "windows-observations/run-40939421976",
+  "manual_review": "PENDING_INDEPENDENT_REVIEW",
+  "cases": [
+    {
+      "case": "runner-baseline",
+      "retained_acquisition_manifest_sha256": "7612c28e80c70f118fe49d1d81de216bea6ce282028d3db8830acb4c8d3b4b62",
+      "acquisition_manifest_verifies": false,
+      "files": [
+        {
+          "path": "case.json",
+          "acquisition_sha256": "352420cf771063c7d118ba1e701e481ef12dfc9bb9b9dcbed0527a3c5194e681",
+          "present": true,
+          "retained_sha256": "a23f224eb474805732f0dc9e101bbadb7e1708584b3ce0361ed198d8630debd1",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "manual-review.csv",
+          "acquisition_sha256": "04152ff948a4223c26d8d7c9c32e339c63f5130ebd89efcb0be1b9143ededf61",
+          "present": true,
+          "retained_sha256": "7decbf9043a9d1c490d49cf27e5ae83e8ca320ad66f695b5a48fec2d54aa83ce",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-after.json",
+          "acquisition_sha256": "44a02879f1bc53439d4b08c9d3971eae314e511ce4be83fd9efca65235047f68",
+          "present": true,
+          "retained_sha256": "ef68d91de8ff15ddd2e8d9f3092fcd9cb35bed0396ed13e5bb2a170121724746",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-before.json",
+          "acquisition_sha256": "d2829fd03a6e0098d3d03488698833762703870c306c3b78666d8faa3c5049c8",
+          "present": true,
+          "retained_sha256": "1ffd38156341c4e87479a87761831fb25083a48edb28a04ce068bde5b8bb014b",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/scan.json",
+          "acquisition_sha256": "402957ba89807f0edc8f14073e14f446196d6b883131d51a98142618b1f8d503",
+          "present": true,
+          "retained_sha256": "45f62da12597e359cbb1a61185abedde652c246683c5b70f477fe3f7dbaed660",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/secureaudit-c6b54e9f-a1c7-4022-ab64-7b0fa930d70a.html",
+          "acquisition_sha256": "e605f7a2cd3700c68c313666db31684d7e5fe9e276c13305897a086285961a3a",
+          "present": true,
+          "retained_sha256": "769579d7324decabe7a4877996a36407076a4e74bc06e7a6dec67492c05e210a",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-2/reference-after.json",
+          "acquisition_sha256": "758178c3f429219c7a2a14e5fa7edee58b0d144ca8ea507d1d87365b6fd87618",
+          "present": true,
+          "retained_sha256": "89b3dacd60486abe1b8f67ff2459ba857ed4451ce9d11756c78b0c56faec6b56",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-2/reference-before.json",
+          "acquisition_sha256": "089f91e52fc1737697f892682cc19dde01eb59b61c4d278b7eb809e637065977",
+          "present": true,
+          "retained_sha256": "45e645c5ecd1027cbfcdc7d6a59fe97e19e8e497d50f1fb0e3459ecb5699c975",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-2/scan.json",
+          "acquisition_sha256": "892be3879377a70387387175376c940faa7fd9cc6cd4dcebe49cd1eabfe5f97d",
+          "present": true,
+          "retained_sha256": "f17c1192d00964c00307f21ea1e1e8610eb068d5da1195928c7709a5e5a5bbc1",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-2/secureaudit-9a081309-5987-46d9-991d-437f410b865d.html",
+          "acquisition_sha256": "5751a2c9793be9d07abb7b1169830bc5ab0c4407b97b5222c70c333baec5dcec",
+          "present": true,
+          "retained_sha256": "af67f220c84e67568fb720460004859f96159de3daa12f1a0fbfea62e9e9a161",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-3/reference-after.json",
+          "acquisition_sha256": "7bc97a88f714484a5a959f5bbe3589e9608cc9de2c1d97f2e09387248b4821b9",
+          "present": true,
+          "retained_sha256": "33455033878ed1e25215b8e9d9e64e5d670f60326eb94956a916bf6c32eca932",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-3/reference-before.json",
+          "acquisition_sha256": "8f41d4d0e2f0bda417c4d8f9cd76ba4188503d0c8a0daab836be03bdba6962dc",
+          "present": true,
+          "retained_sha256": "8fcd8299fc3b902d5d7a1968f378ec6e768c8a8121a5efb3f7d1a973f0774d3e",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-3/scan.json",
+          "acquisition_sha256": "4b356531b5efa640c345192714beb8b57d26032557e2c5cbd7e57a7af1fd589e",
+          "present": true,
+          "retained_sha256": "c35a4d9db52cea9350ab7c86629c7fa69eb99a0761868cff3be1e69ae964f020",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-3/secureaudit-793362b9-bc5e-4980-8abe-930df7eb8873.html",
+          "acquisition_sha256": "192acf25c509dc36f508159574095def5e9e7a4f861d5410bda7e3d5e0588220",
+          "present": true,
+          "retained_sha256": "9f91175caf71e5c85c2a0c3674c59876ffc1f7245013f8541749ecc063ce6c11",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "scans.db",
+          "acquisition_sha256": "4a3e6f8567e93b3422672ed551d1ade52c9aefe8515f7f4f1dd549ee4d79cb70",
+          "present": false
+        }
+      ]
+    },
+    {
+      "case": "runner-defender-off",
+      "retained_acquisition_manifest_sha256": "995bb55224f467c01e6b519da16ac9d4dfd9aaf01e4aaa035042769369e66b43",
+      "acquisition_manifest_verifies": false,
+      "files": [
+        {
+          "path": "case.json",
+          "acquisition_sha256": "3429d092b71615ef20559bf12107ec95b7acc06368990b1860dbe29e0346616b",
+          "present": true,
+          "retained_sha256": "0230231e66d1c3f32981b49d2b84dcb17fd4870a81553e0652896947f47978c8",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "manual-review.csv",
+          "acquisition_sha256": "84c9f6d13efabf1a5df217acf908db8485fee87af2b71ea601f19488f28c7882",
+          "present": true,
+          "retained_sha256": "0be451026f8c8bedf88077cd88dc91229c3a0e4a79ce33b78c4b466f074d9ff1",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-after.json",
+          "acquisition_sha256": "a5295d77871c1c09d9e7ca3471e494881cc979cbd8b7e28c9af1d9ac99458195",
+          "present": true,
+          "retained_sha256": "39c1a4635be513a44c295608767d899abf4e4253663b52665a43acb86cc8a078",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-before.json",
+          "acquisition_sha256": "0014b6efbbf7f4b35143ec4ec9271217f1942e58b0388bd0a75e460712e5b296",
+          "present": true,
+          "retained_sha256": "40695474de31f8af694053535bd732a17e9aa454cc66df8f5199cb133b37e318",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/scan.json",
+          "acquisition_sha256": "887436b114d7480b1397c415b4b283c92b1d0fb2b019150f069296c07680ebb5",
+          "present": true,
+          "retained_sha256": "ec2520a5ae6e85961f7cf4cad8e80c30b1fc1212e81f7e2af9aa13ee8de3e504",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/secureaudit-df66c244-2a6e-447a-a752-64dad75d2a02.html",
+          "acquisition_sha256": "65bcbab6e7675cade9cf81694825eada3ddebfa299a3afb12e8e8d8214d61eb7",
+          "present": true,
+          "retained_sha256": "4c0a97e6f15d3c68974a7750b1f9760ca38f611bdad7a7242704e9493ff37cdb",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "scans.db",
+          "acquisition_sha256": "f08cc288a67236f2c6d533acdd4d59c4b63ffabdef58ee2706485b5febd0545c",
+          "present": false
+        }
+      ]
+    },
+    {
+      "case": "runner-firewall-off",
+      "retained_acquisition_manifest_sha256": "56bf69092fee6710331fb4f49f2574f68413ac427e7fe056967cc412076ffd61",
+      "acquisition_manifest_verifies": false,
+      "files": [
+        {
+          "path": "case.json",
+          "acquisition_sha256": "2f85d1123037a387aa549410a5bd55e73dc1d334d54abe1b39778131ca6fdfde",
+          "present": true,
+          "retained_sha256": "9dfce29ca00285ca100a27806967facadfc82e874ba3770f5922d449aedc132a",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "manual-review.csv",
+          "acquisition_sha256": "cfd192d65ed09dc64e42ee2145515f32ae1f427da9fa209549b1ca95a99db472",
+          "present": true,
+          "retained_sha256": "2d30285b2c141d4e7843c755b5d6ab0542bc5b47d454c60ae6495c11e1047ca1",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-after.json",
+          "acquisition_sha256": "72ab8f1190082f723fca473141178486ecce8933fbbde54c2a1679f94f1625b6",
+          "present": true,
+          "retained_sha256": "c0f9da7c2f94c8fbeb99ab975a9213bad46b658a5ecf7910f1eb73a910d60227",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-before.json",
+          "acquisition_sha256": "8148eadbd9a1e6eca2d2de78afb8919a51eee880dd841e21d219e2b0bd081b85",
+          "present": true,
+          "retained_sha256": "0c5069ec8f990c730996b6af32e794a9cdb8938a152faf9efe16082ac95a4408",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/scan.json",
+          "acquisition_sha256": "fc56cc1f00361ef3153646a13c3a39e3fe590522340a564ad3b459aa5b3422a2",
+          "present": true,
+          "retained_sha256": "6f922292fb6a6663bb93e7f1c5a16b2635bf980aef40b62eb710c907de676462",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/secureaudit-f763c1cf-75be-4ac8-8494-84a6b084d3a6.html",
+          "acquisition_sha256": "1b8f7af2a6ed5211dda652f2708bb91d20bca6f9f37d8e8360392585b1501c14",
+          "present": true,
+          "retained_sha256": "0895a89d340612cc10ec28b5ecfe6de41dc5b5613ced91dccc9e34857c739f15",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "scans.db",
+          "acquisition_sha256": "b19c42d575df4351e8c7e2cf5ce6705fb6f95382df9714a4814bc65d2f683de4",
+          "present": false
+        }
+      ]
+    },
+    {
+      "case": "runner-guest-on",
+      "retained_acquisition_manifest_sha256": "9adc585cc0cc60f0dd680c3bc18458a6fbd69a7b25a29c819cd7c9ad6ea1bf9e",
+      "acquisition_manifest_verifies": false,
+      "files": [
+        {
+          "path": "case.json",
+          "acquisition_sha256": "d3757d29e0596c971a2ce2717e10ac32d525a1f685e3b06c1de072ca441c20e2",
+          "present": true,
+          "retained_sha256": "68e779326f73a5da7fcff99259e2b4fec97b3745e5a4f2b33fa6cf3d1717d105",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "manual-review.csv",
+          "acquisition_sha256": "6cfa3b13ae9f262673aa4adb9d00fc61f784f1f568ddf7e77838918c2fb688c2",
+          "present": true,
+          "retained_sha256": "e6c368eb2e949037e78e12df8b9ae5f4941225bfd52afe5b1d238919dd753025",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-after.json",
+          "acquisition_sha256": "bea8da6a4137b331b5c155f98fc506c9ea15c2f176a3e50533a69578d52b2afc",
+          "present": true,
+          "retained_sha256": "20529bd4fe66539a4032e4f8047698d36b8018b0da253f779447d43d466771fa",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-before.json",
+          "acquisition_sha256": "8e9778e6b5be8250398837364a7b8854a03bad1bb17ac88e1d714afe155f4d87",
+          "present": true,
+          "retained_sha256": "ffd15f973f8d6071358300ba8accc70fa151c416da083a9179ecbc6f1fda33cd",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/scan.json",
+          "acquisition_sha256": "dc99a24c90f7e9b137c808be77b16c4b3ac4c1aafff4080fec2eab8f93e9b518",
+          "present": true,
+          "retained_sha256": "ab78d00f1a07a33783c5381934fd22cf179d5c7ad2a8c12212d15ef59f5b0b14",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/secureaudit-6ab95d9f-e63f-470d-917a-b6fa9fdffc9e.html",
+          "acquisition_sha256": "b9d89f68e1dfce86d45be1ba6a36b3ee2d94f974293da8968aac57f16f016eba",
+          "present": true,
+          "retained_sha256": "10b620a4dbf496871a78c345140dd5da8013b07fb647f6a01c500df8acb572e0",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "scans.db",
+          "acquisition_sha256": "70e50cf96f66a644dc4992ce7f0c5f4fa9f5994ad19cdec34bb943ba7e734663",
+          "present": false
+        }
+      ]
+    },
+    {
+      "case": "runner-selective",
+      "retained_acquisition_manifest_sha256": "b73f5580d121cae3e02db55174cddf053072435b603e0d80cc7994d7859d1aa0",
+      "acquisition_manifest_verifies": false,
+      "files": [
+        {
+          "path": "case.json",
+          "acquisition_sha256": "38c318191bcdc43c8d9ec8f6008356a7056360b9a22113c77ddb2f6feff815ae",
+          "present": true,
+          "retained_sha256": "60d73fd9ddccb4ede218a37009d996c5c0f373b6d508b584c7cca56b625df125",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "manual-review.csv",
+          "acquisition_sha256": "0f4bc64858711b90c9725297539ed56bffff6252149316c5332a1311a08053a2",
+          "present": true,
+          "retained_sha256": "476177b50e3ef781386e91f31b8e5cd46d9d4d0fef4647ffa3de65deea3e9d39",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-after.json",
+          "acquisition_sha256": "49be2c296874411b03ae3dfa01ec0ac4bc4d9b099d942fd52c835a37b80691cf",
+          "present": true,
+          "retained_sha256": "ba9009260733b09f64f2292bf58894ca75b8770d68dbecea5c231d11f10ced0e",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/reference-before.json",
+          "acquisition_sha256": "e1b039d71f18187fa3473e7381601cfe5f6bdba74a8cf4a8ec6c43243fc36f48",
+          "present": true,
+          "retained_sha256": "e5fc7eba153a04bb7a67c8bd865fc78359a05eed16bc3decdb2f7a62fc8f1fee",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/scan.json",
+          "acquisition_sha256": "6c989e7ac82c8599f2bc606b641a5d73fc786a54c614586295491b920a9892d2",
+          "present": true,
+          "retained_sha256": "8d62fe5035448e19bf64aeba089ec4dccc91a3abcfedc46bc7b099ad10d0c0fd",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "repeat-1/secureaudit-991f23e4-0cd2-4af0-b87a-63d1af027d75.html",
+          "acquisition_sha256": "e45e9776beb2fb18c4dba22c3dd9c177ab849b2900aed8f4466b0906e051aad1",
+          "present": true,
+          "retained_sha256": "ce966420d6b61e55d7473a0598ecb8cbfac2a7ff30491318f5d2d5cf13f99bb7",
+          "acquisition_hash_matches": false,
+          "lf_to_crlf_hash_matches": true
+        },
+        {
+          "path": "scans.db",
+          "acquisition_sha256": "6f19f428a7c57cb0c63419699e90dcde4c5eb71698992bd53e345e622c112cc1",
+          "present": false
+        }
+      ]
+    }
+  ]
+}
