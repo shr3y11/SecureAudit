@@ -38,3 +38,30 @@ jobs:
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path tools/collect_reference.ps1), [ref]$tokens, [ref]$errors) | Out-Null
           if ($errors.Count) { throw ($errors | Out-String) }
+  windows-pilot:
+    # Only this repository's branch; never set up accounts for fork PR code.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Capture real Windows evidence under both privilege levels
+        shell: powershell
+        run: ./tools/run_hosted_study.ps1 -Python (Get-Command python).Source
+      - name: Retain raw evidence and pending review sheets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-pilot-${{ matrix.os }}-${{ github.run_id }}
+          path: C:/SecureAuditStudy/lab-results
+          retention-days: 30
+          if-no-files-found: error

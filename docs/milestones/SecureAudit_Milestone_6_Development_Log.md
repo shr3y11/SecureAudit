@@ -7,6 +7,32 @@ tags: [secureaudit, research, evidence, reporting]
 
 # Milestone 6: Evidence completeness research extension
 
+## Hosted pilot follow-up (30 October 2026)
+
+Completed capture: run 40999603644 passed both Windows pilot and both software
+test jobs. The pilot produced 18 scans and 66 actual readings. Full elevated
+vectors were 4P/1F/0E; full standard vectors were 3P/0F/2E on both images in
+all three repetitions. File hashes and recorded before/after native fields
+were checked. Independent reviewer sheets remain pending. See
+research/HOSTED_PILOT_RESULTS.md for provenance and limits. These observations
+supersede earlier statements below that no hosted outputs were yet available.
+
+The initial code is published in draft PR https://github.com/shr3y11/SecureAudit/pull/8.
+This follow-up adds real hosted Windows collection, privilege/version metadata,
+and a strict observation summarizer. `tools/run_hosted_study.ps1` requires a
+disposable GitHub-hosted runner, temporarily creates an unelevated account,
+captures both privilege conditions, then removes that account. It never changes
+the five assessed configuration settings. Artifact retention is 30 days.
+
+The study is a small Server-image case study, not Home/Pro validation. A native
+reference is not independent ground truth. The reviewer sheets remain pending.
+The four summarizer tests reject empty inputs and incorrect/missing privilege
+metadata and preserve observed counts without inventing accuracy.
+
+Earlier publication-blocked statements below describe the historical local
+handoff and are superseded by this PR link. Hosted observations must be tied
+to an actual workflow run; this log alone does not establish a successful run.
+
 Scope: fixed-baseline reporting in the M4 local workflow, reproducible model
 analysis, and a Windows validation protocol. The M5 central dashboard remains
 on `main`; this feature follows the documented `develop` branching workflow.

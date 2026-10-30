@@ -85,3 +85,10 @@ The external comparison detects changes, including legitimate new submissions;
 it does not determine malicious intent. Untouched and benign-addition controls
 are pinned in the tests. Fresh export timestamps are excluded from content
 comparison, and bundle forgery uses the saved original export.
+
+## Hosted Windows pilot
+
+See [the recorded hosted pilot](HOSTED_PILOT_RESULTS.md) for the develop-branch
+observations and their review limitations. The capture tools and protocol are
+in [RESEARCH_VALIDATION.md](../docs/RESEARCH_VALIDATION.md). These observations
+do not replace independent reference review.
