@@ -13,12 +13,13 @@ Ed25519 signature instead:
 
 Behaviour is deliberately staged so the feature can be adopted safely:
 
-- Neither file present: the catalog is *unsigned* and loads as before
-  (development checkouts, tests with fixture catalogs).
+- Neither file present: allowed only for unsigned development checkouts.
+  Required-signature policy rejects removal of both signing files.
 - Exactly one present: a hard error — a half-deployed signature setup
   must not silently degrade.
-- Both present: the signature and every file hash are verified before
-  the catalog is trusted. Any mismatch is a hard error.
+- Both present: verify the signature and every covered file. Signed releases
+  also pin the public key in core/catalog_trust.py, outside checks/.
+  Replacement of verifier code itself is outside this trust boundary.
 """
 
 from __future__ import annotations
@@ -87,7 +88,8 @@ def verify_signed_manifest(signed: dict[str, Any], public_key_pem: bytes) -> dic
     return manifest
 
 
-def verify_catalog_directory(checks_directory: Path) -> str:
+def verify_catalog_directory(checks_directory: Path, *, require_signed=False,
+                             trusted_public_key_sha256=None) -> str:
     """Verify the catalog + collector scripts in a checks directory.
 
     Returns "verified" when a valid signature covers the exact bytes on
@@ -95,10 +97,13 @@ def verify_catalog_directory(checks_directory: Path) -> str:
     """
 
     checks_directory = Path(checks_directory)
+    require_signed = require_signed or trusted_public_key_sha256 is not None
     signature_path = checks_directory / SIGNATURE_FILENAME
     public_key_path = checks_directory / PUBLIC_KEY_FILENAME
 
     if not signature_path.exists() and not public_key_path.exists():
+        if require_signed:
+            raise CatalogIntegrityError("Signed catalog required; signature material is missing.")
         return "unsigned"
     if not signature_path.exists() or not public_key_path.exists():
         raise CatalogIntegrityError(
@@ -111,7 +116,15 @@ def verify_catalog_directory(checks_directory: Path) -> str:
     except (OSError, ValueError) as exc:
         raise CatalogIntegrityError(f"Catalog signature file is unreadable: {exc}") from exc
 
-    manifest = verify_signed_manifest(signed, public_key_path.read_bytes())
+    public_key_bytes = public_key_path.read_bytes()
+    if require_signed and trusted_public_key_sha256 is None:
+        raise CatalogIntegrityError("Signed release requires a pinned public key outside the checks directory.")
+    if trusted_public_key_sha256 is not None and _sha256(public_key_bytes) != trusted_public_key_sha256:
+        raise CatalogIntegrityError("Catalog public key does not match the trusted fingerprint.")
+    try:
+        manifest = verify_signed_manifest(signed, public_key_bytes)
+    except (ValueError, TypeError) as exc:
+        raise CatalogIntegrityError(f"Malformed signature or public key: {exc}") from exc
 
     catalog_path = checks_directory / "catalog.json"
     try:
