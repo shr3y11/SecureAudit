@@ -78,3 +78,22 @@ jobs:
           path: release-files/*
           retention-days: 30
           if-no-files-found: error
+
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare source and documentation files
+        shell: bash
+        run: |
+          mkdir release-source
+          git archive --format=zip --prefix=SecureAudit-v0.6.0-beta-source/ --output=release-source/SecureAudit-v0.6.0-beta-source.zip HEAD
+          cp README.md RELEASE_NOTES.md docs/RELEASE_GUIDE.md release-source/
+          cd release-source
+          sha256sum SecureAudit-v0.6.0-beta-source.zip > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SecureAudit-v0.6.0-beta-source-files
+          path: release-source/*
+          retention-days: 30
+          if-no-files-found: error
