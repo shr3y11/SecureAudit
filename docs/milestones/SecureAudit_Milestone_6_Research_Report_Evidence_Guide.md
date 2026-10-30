@@ -7,6 +7,25 @@ tags: [secureaudit, research, evidence]
 
 # Milestone 6 research evidence guide
 
+## Hosted pilot follow-up
+
+Run 40999603644 has now completed successfully. Actual archived outputs support
+the counts in research/HOSTED_PILOT_RESULTS.md. All three repetitions matched
+within each condition/image. The blank independent-review records must remain
+blank until a reviewer completes them. Capture completion is not accuracy review.
+
+Use PR #8's Research reporting validation workflow. Retain both Windows pilot
+artifacts, the exact run/head SHA, and the generated observations CSV/JSON/Markdown.
+Compare full-admin versus full-standard within each runner image. The process
+records observed token privilege and rejects a mislabeled standard-user case.
+Three repeated scans of one image are repeated observations, not three machines.
+
+Capture evidence is available only after the corresponding job succeeds. Review
+the before/after raw reference data for drift; native APIs overlap the collectors,
+so accuracy remains undetermined until independent corroboration. Do not label
+an unavailable BitLocker interface as proof of an unencrypted drive. See the
+hosted pilot section of RESEARCH_VALIDATION.md for the predeclared scope.
+
 ## Evidence to retain
 
 1. Commit identifier and diff for `core/evidence.py`, application wiring,

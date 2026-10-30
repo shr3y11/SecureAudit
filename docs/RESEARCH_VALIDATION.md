@@ -1,5 +1,38 @@
 # Windows validation protocol
 
+## Automated hosted pilot
+
+PR #8 includes a hosted Windows pilot on Windows Server 2022 and 2025 runner
+images. It collects three full elevated scans, three full scans under a newly
+created standard account, and three firewall-only elevated scans per image.
+The setup script refuses execution outside a disposable GitHub-hosted runner.
+It removes its temporary standard account after capture. It does not change
+firewall, Defender, encryption, Guest, or SMB settings.
+
+The before/after reference records include the observed administrator token
+and PowerShell version. Summary generation rejects a standard-user condition
+whose captured token is elevated or missing. The environment image/build and
+workflow identifiers accompany the original results. Workflow artifacts retain
+raw references, scan JSON, SQLite, HTML, review CSVs and generated summaries for
+30 days; preserve a chosen run for the paper before retention expires.
+
+This provides actual collection observations, not independent ground truth.
+Server images are not Windows Home/Pro, repetitions are not independent hosts,
+and the CI runners are not representative of enterprise endpoints. A completed
+workflow does not establish collector accuracy or an auditor usability benefit.
+Only independently reviewed observations may support accuracy claims.
+
+Predeclared questions: which per-check outcomes differ by captured privilege
+level, how consistent they are across repetitions, and whether selected-only
+execution retains the fixed baseline in stored reports. Report counts and raw
+conditions even if no differences appear. Native settings may drift between
+runs, so compare before/after reference values as well as collection status.
+The 80% aggregate label remains illustrative and is not the empirical endpoint.
+
+No recorded observations existed when this protocol was written. Subsequent
+results must cite a completed run and its artifact; never infer success from
+the presence of this workflow. Independent manual review remains required.
+
 ## Purpose and current evidence
 
 The executed study tests aggregate reporting semantics. This protocol tests
