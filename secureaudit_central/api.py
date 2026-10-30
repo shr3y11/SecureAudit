@@ -51,12 +51,48 @@ def metrics(passed, failed, errors):
             "risk": round(100 * failed / assessed, 2) if assessed else None}
 
 
+def assessment_integrity(row):
+    """Validate stored payload and its denormalized reporting fields.
+
+    This detects inconsistency, not a writer who coherently replaces both
+    evidence and its digest. Endpoint/source attribution needs a trusted
+    external commitment and is not authenticated by the payload checksum.
+    """
+    issues = []
+    if hashlib.sha256(row.evidence_json.encode("utf-8")).hexdigest() != row.sha256:
+        issues.append("evidence_hash")
+    try:
+        payload = EvidenceInput.model_validate_json(row.evidence_json)
+    except (ValueError, TypeError):
+        return None, issues + ["payload"]
+    counts = {status: sum(c.status == status for c in payload.checks)
+              for status in ("Pass", "Fail", "Error")}
+    if (row.passed, row.failed, row.errors) != tuple(counts[s] for s in ("Pass", "Fail", "Error")):
+        issues.append("summary_counts")
+    if row.submission_id != payload.submission_id:
+        issues.append("submission_id")
+    try:
+        if datetime.fromisoformat(row.collected_at.replace("Z", "+00:00")) != payload.collected_at:
+            issues.append("collected_at")
+    except (ValueError, AttributeError):
+        issues.append("collected_at")
+    return counts, issues
+
+
 def assessment_dict(row, include_checks=False):
+    counts, issues = assessment_integrity(row)
+    if counts is None:
+        raise HTTPException(409, "Stored evidence is malformed; inspect the verification endpoint")
+    summary = metrics(*(counts[s] for s in ("Pass", "Fail", "Error")))
+    if issues:
+        # Never turn an inconsistent stored record into an apparent approval.
+        summary.update(score=None, coverage=None, risk=None)
     result = {"id": row.id, "endpoint_id": row.endpoint_id,
               "submission_id": row.submission_id, "collected_at": row.collected_at,
               "received_at": row.received_at, "sha256": row.sha256,
               "source": row.source,
-              **metrics(row.passed, row.failed, row.errors)}
+              "integrity_ok": not issues, "integrity_issues": issues,
+              **summary}
     if include_checks:
         result["checks"] = json.loads(row.evidence_json)["checks"]
     return result
@@ -238,12 +274,23 @@ def create_app(database_url, api_token, *, worker_enabled=True):
         endpoints = session.scalars(select(Endpoint).order_by(Endpoint.hostname)).all()
         assessments = session.scalars(select(Assessment).order_by(Assessment.collected_at.desc(), Assessment.received_at.desc())).all()
         latest = {}
+        invalid_endpoints = set()
         for assessment in assessments:
             latest.setdefault(assessment.endpoint_id, assessment)
+            if assessment_integrity(assessment)[1]:
+                invalid_endpoints.add(assessment.endpoint_id)
+        def latest_summary(endpoint_id):
+            if endpoint_id not in latest:
+                return None
+            value = assessment_dict(latest[endpoint_id])
+            if endpoint_id in invalid_endpoints:
+                value.update(score=None, coverage=None, risk=None, integrity_ok=False)
+                value["integrity_issues"] = sorted(set(value["integrity_issues"] + ["endpoint_history"]))
+            return value
         return [{"id": e.id, "hostname": e.hostname, "group_name": e.group_name,
                  "platform": e.platform, "simulated": e.simulated, "last_seen": e.last_seen,
                  "registered_at": e.registered_at,
-                 "latest": assessment_dict(latest[e.id]) if e.id in latest else None} for e in endpoints]
+                 "latest": latest_summary(e.id)} for e in endpoints]
 
     @app.get("/api/endpoints", dependencies=protected)
     def list_endpoints(session: Session = Depends(db)):
@@ -317,10 +364,13 @@ def create_app(database_url, api_token, *, worker_enabled=True):
             raise HTTPException(404, "Endpoint not found")
         rows = session.scalars(select(Assessment).where(
             Assessment.endpoint_id == endpoint_id)).all()
-        mismatches = [a.submission_id for a in rows
-                      if hashlib.sha256(a.evidence_json.encode("utf-8")).hexdigest() != a.sha256]
+        details = [{"submission_id": a.submission_id, "issues": assessment_integrity(a)[1]}
+                   for a in rows]
+        details = [d for d in details if d["issues"]]
+        mismatches = [d["submission_id"] for d in details]
         return {"endpoint_id": endpoint_id, "checked": len(rows),
-                "mismatches": mismatches, "ok": not mismatches}
+                "mismatches": mismatches, "details": details, "ok": not mismatches,
+                "scope": "Payload digest, summary counts, submission ID and collection time; not endpoint/source authenticity"}
 
     @app.get("/api/endpoints/{endpoint_id}/bundle", dependencies=protected)
     def evidence_bundle(endpoint_id: str, session: Session = Depends(db)):
@@ -446,9 +496,14 @@ def create_app(database_url, api_token, *, worker_enabled=True):
         rows = endpoint_rows(session)
         latest = [e["latest"] for e in rows if e["latest"]]
         p, f, er = (sum(a[key] for a in latest) for key in ("passed", "failed", "errors"))
+        aggregate = metrics(p, f, er)
+        invalid = sum(not a["integrity_ok"] for a in latest)
+        if invalid:
+            aggregate.update(score=None, coverage=None, risk=None)
         return {"endpoint_count": len(rows), "simulated_count": sum(e["simulated"] for e in rows),
                 "assessed_endpoints": len(latest), "at_risk_endpoints": sum(a["failed"] > 0 for a in latest),
-                "database": engine.dialect.name, **metrics(p, f, er)}
+                "integrity_ok": not invalid, "invalid_latest_assessments": invalid,
+                "database": engine.dialect.name, **aggregate}
 
     @app.get("/api/events", dependencies=protected)
     def events(session: Session = Depends(db)):
