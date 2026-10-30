@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+from os import environ
 from pathlib import Path
 import platform
 import subprocess
@@ -56,6 +57,8 @@ def main():
     write_json(args.output / "case.json", {
         "case_id": args.case_id, "snapshot_id": args.snapshot_id,
         "python": platform.python_version(), "platform": platform.platform(),
+        "provenance": {key: environ.get(key) for key in
+                       ("GITHUB_SHA", "GITHUB_RUN_ID", "RUNNER_OS", "ImageOS", "ImageVersion")},
         "catalog_context": context, "review_status": "PENDING_INDEPENDENT_REVIEW"})
     review_rows = []
     for repeat in range(1, args.repeat + 1):

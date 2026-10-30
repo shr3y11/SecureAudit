@@ -9,6 +9,8 @@ function Read-Reference([scriptblock]$Command) {
 }
 $reference = [ordered]@{
     captured_at_utc = [DateTime]::UtcNow.ToString('o')
+    is_administrator = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    powershell_version = $PSVersionTable.PSVersion.ToString()
     os = Read-Reference { Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber }
     firewall = Read-Reference { Get-NetFirewallProfile | Select-Object Name, Enabled }
     defender = Read-Reference { Get-MpComputerStatus | Select-Object AMServiceEnabled, AntivirusEnabled, RealTimeProtectionEnabled }
